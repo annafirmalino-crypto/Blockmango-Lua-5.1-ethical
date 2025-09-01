@@ -1,6 +1,3 @@
---[[
-next zentex panel & Gui?? 
-]]
 
 
 
