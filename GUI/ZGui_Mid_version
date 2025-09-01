@@ -1,0 +1,3342 @@
+
+
+--[[
+───────────────────────────────────────────────
+ 🚀 Welcome to Srix GUI - Beta v1.0 🚀
+───────────────────────────────────────────────
+
+📌 Developed By: 
+   🔹 @zentexhacker 
+   🔹 @khdbg 
+
+⚡ About:
+   This is the very first **BETA Version (1.0)** 
+   of the **Srix GUI Project** – a sleek, 
+   powerful, and user-friendly interface 
+   designed for **MASS control** and 
+   advanced customization.
+
+🖥️ GUI Features:
+   - Clean and modern interface
+   - Smooth navigation system
+   - Optimized for speed and performance
+   - Easy-to-use design for all users
+   - MASSIVE potential for future updates!
+   - Ban System Added.
+
+🔥 Highlights:
+   - Built for stability and scalability
+   - Focused on MASS GUI enhancements
+   - Beta testing to ensure perfection
+   - Constantly evolving with your feedback
+
+───────────────────────────────────────────────
+ Stay tuned for **upcoming releases** packed 
+ with new MASS features, upgraded visuals, 
+ and more advanced GUI tools!
+───────────────────────────────────────────────
+]]--
+
+local GMHelper = {}
+
+function GMHelper:MovingControls(button)
+    local JumpPanel = GUIManager:getWindowByName("Main-Jump")
+    local PolePanel = GUIManager:getWindowByName("Main-PoleControl")
+    local MovePanel = GUIManager:getWindowByName("Main-MoveState")
+    togmoving = not togmoving
+
+    if togmoving then
+        local mainLayout = GUIManager:getWindowByName("Main")
+        if mainLayout then
+            if JumpPanel then mainLayout:AddChildWindow(JumpPanel) end
+            if PolePanel then mainLayout:AddChildWindow(PolePanel) end
+            if MovePanel then mainLayout:AddChildWindow(MovePanel) end
+        end
+
+        local function setupPanel(panel, w, h)
+            if not panel then return end
+            panel:SetTouchable(true)
+            panel:SetWidth({ 0, w })
+            panel:SetHeight({ 0, h })
+            GUISystem.Instance():GetRootWindow():AddChildWindow(panel)
+            panel:SetVisible(true)
+
+            local screenW = GUISystem.Instance():GetRootWindow():GetWidth()[2]
+            local screenH = GUISystem.Instance():GetRootWindow():GetHeight()[2]
+            panel:SetXPosition({0, (screenW - w) / 2})
+            panel:SetYPosition({0, (screenH - h) / 2})
+
+            local move = function(w)
+                timer.cipka = LuaTimer:scheduleTimer(function()
+                    if not Blockman.Instance().m_gameSettings:isMouseMoving() then
+                        local mousePos = Blockman.Instance().m_gameSettings:getMousePos()
+                        local targetX = mousePos.x / 4.0 - 120
+                        local targetY = mousePos.y / 4.0 - 80
+                        local currentX = panel:GetXPosition()[2]
+                        local currentY = panel:GetYPosition()[2]
+                        local newX = currentX + (targetX - currentX) * 0.1
+                        local newY = currentY + (targetY - currentY) * 0.1
+                        panel:SetXPosition({0, newX})
+                        panel:SetYPosition({0, newY})
+                    end
+                end, 5, 250)
+            end
+
+            panel:registerEvent(GUIEvent.TouchMove, move)
+            panel:registerEvent(GUIEvent.ButtonClick, function()
+                GUIGMControlPanel:hide()
+                LuaTimer:scheduleTimer(function() end, 5, 100)
+            end)
+        end
+
+        setupPanel(JumpPanel, 120, 120)
+        setupPanel(PolePanel, 240, 240)
+        setupPanel(MovePanel, 60, 60)
+
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Enabled")
+
+    else
+        local function disablePanel(panel)
+            if not panel then return end
+            panel:SetTouchable(true)
+            panel:SetVisible(true)
+        end
+
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+
+        if timer.cipka then
+            LuaTimer:cancel(timer.cipka)
+            timer.cipka = nil
+        end
+
+        disablePanel(JumpPanel)
+        disablePanel(PolePanel)
+        disablePanel(MovePanel)
+    end
+end
+
+function GMHelper:InventoryWalk(button)
+    self.inventoryWalkEnabled = not self.inventoryWalkEnabled
+    if self.inventoryWalkEnabled then
+        if self.inventoryWalkTimer then LuaTimer:cancel(self.inventoryWalkTimer) end
+        self.inventoryWalkTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player and GUISystem.Instance():IsGUIOpen() then
+                player.Player.canMove = true
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Inventory Walk Enabled")
+    else
+        if self.inventoryWalkTimer then LuaTimer:cancel(self.inventoryWalkTimer) self.inventoryWalkTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Inventory Walk Disabled")
+    end
+end
+
+function GMHelper:NoSlow(button)
+    self.noSlowEnabled = not self.noSlowEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.noSlowEnabled then
+        if self.noSlowTimer then LuaTimer:cancel(self.noSlowTimer) end
+        self.noSlowTimer = LuaTimer:scheduleTimer(function()
+            player.Player.slowdownFactor = 1.0
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00No Slow Enabled")
+    else
+        if self.noSlowTimer then LuaTimer:cancel(self.noSlowTimer) self.noSlowTimer = nil end
+        player.Player.slowdownFactor = 0.2
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000No Slow Disabled")
+    end
+end
+
+function GMHelper:FastEat(button)
+    self.fastEatEnabled = not self.fastEatEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.fastEatEnabled then
+        player.Player.eatSpeed = 0
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Fast Eat Enabled")
+    else
+        player.Player.eatSpeed = 32
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Fast Eat Disabled")
+    end
+end
+
+function GMHelper:AutoRespawn(button)
+    self.autoRespawnEnabled = not self.autoRespawnEnabled
+
+    if not self.autoRespawnEnabled then
+        if self.respawnCallback then
+            CEvents.LuaPlayerDeathEvent:unregisterCallBack(self.respawnCallback)
+            self.respawnCallback = nil
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000AutoRespawn Disabled")
+        return
+    end
+
+    if self.respawnCallback then
+        CEvents.LuaPlayerDeathEvent:unregisterCallBack(self.respawnCallback)
+        self.respawnCallback = nil
+    end
+
+    self.respawnCallback = function(deadPlayerId)
+        if deadPlayerId ~= CGame.Instance():getPlatformUserId() then return end
+        local clientWrapper = PlayerManager:getClientPlayer()
+        if not clientWrapper or not clientWrapper.Player then return end
+        PacketSender:getSender():sendRebirth()
+        PlayerManager:createClientPlayer()
+        RootGuiLayout.Instance():showMainControl()
+    end
+
+    CEvents.LuaPlayerDeathEvent:registerCallBack(self.respawnCallback)
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00AutoRespawn Enabled")
+end
+
+function GMHelper:Regen(button)
+    self.regenEnabled = not self.regenEnabled
+    if self.regenEnabled then
+        if self.regenTimer then LuaTimer:cancel(self.regenTimer) end
+        self.regenTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player and player.Player.health < 20 then
+                player.Player.health = math.min(player.Player.health + 0.5, 20)
+            end
+        end, 200, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Regen Enabled")
+    else
+        if self.regenTimer then LuaTimer:cancel(self.regenTimer) self.regenTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Regen Disabled")
+    end
+end
+
+function GMHelper:AutoArmor(button)
+    self.autoArmorEnabled = not self.autoArmorEnabled
+    if self.autoArmorEnabled then
+        if self.autoArmorTimer then LuaTimer:cancel(self.autoArmorTimer) end
+        self.autoArmorTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local inventory = player.Player.inventory
+                local armorSlots = {helmet = 39, chestplate = 38, leggings = 37, boots = 36}
+                for i = 0, 35 do
+                    local item = inventory:getItem(i)
+                    if item then
+                        if item.name:find("helmet") and not inventory:getItem(armorSlots.helmet) then
+                            inventory:moveItem(i, armorSlots.helmet)
+                        elseif item.name:find("chestplate") and not inventory:getItem(armorSlots.chestplate) then
+                            inventory:moveItem(i, armorSlots.chestplate)
+                        elseif item.name:find("leggings") and not inventory:getItem(armorSlots.leggings) then
+                            inventory:moveItem(i, armorSlots.leggings)
+                        elseif item.name:find("boots") and not inventory:getItem(armorSlots.boots) then
+                            inventory:moveItem(i, armorSlots.boots)
+                        end
+                    end
+                end
+            end
+        end, 1000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Armor Enabled")
+    else
+        if self.autoArmorTimer then LuaTimer:cancel(self.autoArmorTimer) self.autoArmorTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Armor Disabled")
+    end
+end
+
+function GMHelper:KeepInventory(button)
+    self.keepInventoryEnabled = not self.keepInventoryEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.keepInventoryEnabled then
+        player.Player.keepInventory = true
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Keep Inventory Enabled")
+    else
+        player.Player.keepInventory = false
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Keep Inventory Disabled")
+    end
+end
+
+function GMHelper:FastLadder(button)
+    self.fastLadderEnabled = not self.fastLadderEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.fastLadderEnabled then
+        if self.fastLadderTimer then LuaTimer:cancel(self.fastLadderTimer) end
+        self.fastLadderTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockAt = WorldManager:getBlock(math.floor(pos.x), math.floor(pos.y), math.floor(pos.z))
+            if blockAt and blockAt.name == "ladder" then
+                player.Player.velocity = {x = player.Player.velocity.x, y = 0.3, z = player.Player.velocity.z}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Fast Ladder Enabled")
+    else
+        if self.fastLadderTimer then LuaTimer:cancel(self.fastLadderTimer) self.fastLadderTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Fast Ladder Disabled")
+    end
+end
+
+function GMHelper:Parkour(button)
+    self.parkourEnabled = not self.parkourEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.parkourEnabled then
+        if self.parkourTimer then LuaTimer:cancel(self.parkourTimer) end
+        self.parkourTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockAhead = WorldManager:getBlock(math.floor(pos.x), math.floor(pos.y - 1), math.floor(pos.z + 1))
+            if not blockAhead and player.Player.onGround then
+                player.Player:jump()
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Parkour Enabled")
+    else
+        if self.parkourTimer then LuaTimer:cancel(self.parkourTimer) self.parkourTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Parkour Disabled")
+    end
+end
+
+function GMHelper:SafeWalk(button)
+    self.safeWalkEnabled = not self.safeWalkEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.safeWalkEnabled then
+        if self.safeWalkTimer then LuaTimer:cancel(self.safeWalkTimer) end
+        self.safeWalkTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockBelow = WorldManager:getBlock(math.floor(pos.x), math.floor(pos.y - 2), math.floor(pos.z))
+            if not blockBelow and player.Player.onGround then
+                player.Player.velocity = {x = 0, y = 0, z = 0}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Safe Walk Enabled")
+    else
+        if self.safeWalkTimer then LuaTimer:cancel(self.safeWalkTimer) self.safeWalkTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Safe Walk Disabled")
+    end
+end
+
+function GMHelper:EdgeJump(button)
+    self.edgeJumpEnabled = not self.edgeJumpEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.edgeJumpEnabled then
+        if self.edgeJumpTimer then LuaTimer:cancel(self.edgeJumpTimer) end
+        self.edgeJumpTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockAhead = WorldManager:getBlock(math.floor(pos.x), math.floor(pos.y - 1), math.floor(pos.z + 1))
+            if not blockAhead and player.Player.onGround and InputManager:isKeyPressed("w") then
+                player.Player:jump()
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Edge Jump Enabled")
+    else
+        if self.edgeJumpTimer then LuaTimer:cancel(self.edgeJumpTimer) self.edgeJumpTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Edge Jump Disabled")
+    end
+end
+
+function GMHelper:AutoJump(button)
+    self.autoJumpEnabled = not self.autoJumpEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.autoJumpEnabled then
+        player.Player.autoJump = true
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Jump Enabled")
+    else
+        player.Player.autoJump = false
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Jump Disabled")
+    end
+end
+
+function GMHelper:Timer(button)
+    self.timerEnabled = not self.timerEnabled
+    if self.timerEnabled then
+        GameManager:setTickRate(40)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Timer Enabled")
+    else
+        GameManager:setTickRate(20)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Timer Disabled")
+    end
+end
+
+function GMHelper:FakeLag(button)
+    self.fakeLagEnabled = not self.fakeLagEnabled
+    if self.fakeLagEnabled then
+        if self.fakeLagTimer then LuaTimer:cancel(self.fakeLagTimer) end
+        self.fakeLagTimer = LuaTimer:scheduleTimer(function()
+            NetworkManager:delayPackets(200)
+        end, 1000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Fake Lag Enabled")
+    else
+        if self.fakeLagTimer then LuaTimer:cancel(self.fakeLagTimer) self.fakeLagTimer = nil end
+        NetworkManager:delayPackets(0)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Fake Lag Disabled")
+    end
+end
+
+function GMHelper:Spammer(button)
+    self.spammerEnabled = not self.spammerEnabled
+    if self.spammerEnabled then
+        if self.spammerTimer then LuaTimer:cancel(self.spammerTimer) end
+        local spamMessages = {"Hello World!", "This is a test message", "Spammer is active", "Auto message"}
+        local messageIndex = 1
+        self.spammerTimer = LuaTimer:scheduleTimer(function()
+            if MsgSender and MsgSender.sendMsg then
+                MsgSender.sendMsg(spamMessages[messageIndex])
+                messageIndex = (messageIndex % #spamMessages) + 1
+            end
+        end, 30, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Spammer Enabled")
+    else
+        if self.spammerTimer then LuaTimer:cancel(self.spammerTimer) self.spammerTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Spammer Disabled")
+    end
+end
+
+function GMHelper:MiddleClick(button)
+    self.middleClickEnabled = not self.middleClickEnabled
+    if self.middleClickEnabled then
+        if self.middleClickTimer then LuaTimer:cancel(self.middleClickTimer) end
+        self.middleClickTimer = LuaTimer:scheduleTimer(function()
+            if InputManager:isMiddleButtonPressed() then
+                local targetEntity = CameraManager:getTargetEntity()
+                if targetEntity and targetEntity.Player then
+                    local clientPlayer = PlayerManager:getClientPlayer()
+                    if clientPlayer and clientPlayer.Player:getTeamId() ~= targetEntity:getTeamId() then
+                        clientPlayer.Player:lookAt(targetEntity.position)
+                        targetEntity.Player:takeDamage(20)
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Middle Click Enabled")
+    else
+        if self.middleClickTimer then LuaTimer:cancel(self.middleClickTimer) self.middleClickTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Middle Click Disabled")
+    end
+end
+
+function GMHelper:Blink(button)
+    self.blinkEnabled = not self.blinkEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.blinkEnabled then
+        self.blinkPosition = player.Player.position
+        player.Player.visible = false
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Blink Enabled")
+    else
+        if self.blinkPosition then
+            player.Player.position = self.blinkPosition
+        end
+        player.Player.visible = true
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Blink Disabled")
+    end
+end
+
+function GMHelper:Disabler(button)
+    self.disablerEnabled = not self.disablerEnabled
+    if self.disablerEnabled then
+        if self.disablerTimer then LuaTimer:cancel(self.disablerTimer) end
+        self.disablerTimer = LuaTimer:scheduleTimer(function()
+            NetworkManager:blockPacket("MovePacket")
+            NetworkManager:blockPacket("RotationPacket")
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Disabler Enabled")
+    else
+        if self.disablerTimer then LuaTimer:cancel(self.disablerTimer) self.disablerTimer = nil end
+        NetworkManager:unblockAllPackets()
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabler Disabled")
+    end
+end
+
+function GMHelper:AntiAFK(button)
+    self.antiAFKEnabled = not self.antiAFKEnabled
+    if self.antiAFKEnabled then
+        if self.antiAFKTimer then LuaTimer:cancel(self.antiAFKTimer) end
+        self.antiAFKTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                player.Player.yaw = player.Player.yaw + 1
+            end
+        end, 30000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Anti AFK Enabled")
+    else
+        if self.antiAFKTimer then LuaTimer:cancel(self.antiAFKTimer) self.antiAFKTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Anti AFK Disabled")
+    end
+end
+
+function GMHelper:AutoReconnect(button)
+    self.autoReconnectEnabled = not self.autoReconnectEnabled
+    if self.autoReconnectEnabled then
+        if self.autoReconnectTimer then LuaTimer:cancel(self.autoReconnectTimer) end
+        self.autoReconnectTimer = LuaTimer:scheduleTimer(function()
+            if not NetworkManager:isConnected() then
+                NetworkManager:reconnect()
+            end
+        end, 5000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Reconnect Enabled")
+    else
+        if self.autoReconnectTimer then LuaTimer:cancel(self.autoReconnectTimer) self.autoReconnectTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Reconnect Disabled")
+    end
+end
+
+function GMHelper:ChatBypass(button)
+    self.chatBypassEnabled = not self.chatBypassEnabled
+    if self.chatBypassEnabled then
+        self.originalSendMsg = MsgSender.sendMsg
+        MsgSender.sendMsg = function(message)
+            local bypassedMsg = message:gsub("(.)", "%1​")
+            self.originalSendMsg(bypassedMsg)
+        end
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Chat Bypass Enabled")
+    else
+        if self.originalSendMsg then
+            MsgSender.sendMsg = self.originalSendMsg
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Chat Bypass Disabled")
+    end
+end
+
+function GMHelper:SkinStealer(button)
+    self.skinStealerEnabled = not self.skinStealerEnabled
+    if self.skinStealerEnabled then
+        if self.skinStealerTimer then LuaTimer:cancel(self.skinStealerTimer) end
+        self.skinStealerTimer = LuaTimer:scheduleTimer(function()
+            local targetEntity = CameraManager:getTargetEntity()
+            if targetEntity and targetEntity.Player and InputManager:isKeyPressed("r") then
+                local clientPlayer = PlayerManager:getClientPlayer()
+                if clientPlayer and clientPlayer.Player then
+                    clientPlayer.Player.skin = targetEntity.Player.skin
+                    UIHelper.showToast("^00FF00Skin Stolen!")
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Skin Stealer Enabled")
+    else
+        if self.skinStealerTimer then LuaTimer:cancel(self.skinStealerTimer) self.skinStealerTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Skin Stealer Disabled")
+    end
+end
+
+function GMHelper:NameProtect(button)
+    self.nameProtectEnabled = not self.nameProtectEnabled
+    if self.nameProtectEnabled then
+        local players = PlayerManager:getPlayers()
+        for _, player in ipairs(players) do
+            if player.Player then
+                player.Player.displayName = "Protected"
+            end
+        end
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Name Protect Enabled")
+    else
+        local players = PlayerManager:getPlayers()
+        for _, player in ipairs(players) do
+            if player.Player then
+                player.Player.displayName = player.Player.name
+            end
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Name Protect Disabled")
+    end
+end
+local A = false
+local HitBoxPerm = nil
+
+function GMHelper:HitBox()
+    A = not A
+    local players = PlayerManager:getPlayers()
+    local clientPlayer = PlayerManager:getClientPlayer()
+    if A then
+        if HitBoxPerm then LuaTimer:cancel(HitBoxPerm) end
+        HitBoxPerm = LuaTimer:scheduleTimer(function()
+            local currentPlayers = PlayerManager:getPlayers()
+            for _, player in ipairs(currentPlayers) do
+                if player ~= clientPlayer and player.Player and clientPlayer.Player then
+                    if clientPlayer.Player:getTeamId() ~= player:getTeamId() then
+                        local entity = player.Player
+                        entity.height = 8
+                        entity.width = 8
+                        entity.length = 8
+                    end
+                end
+            end
+        end, 30, -1)
+    else
+        if HitBoxPerm then LuaTimer:cancel(HitBoxPerm) end
+        for _, player in ipairs(players) do
+            if player ~= clientPlayer and player.Player and clientPlayer.Player then
+                if clientPlayer.Player:getTeamId() ~= player:getTeamId() then
+                    local entity = player.Player
+                    entity.height = 1.8
+                    entity.width = 0.6
+                    entity.length = 0.6
+                end
+            end
+        end
+    end
+end
+
+local function createButtonHandler(button, moveVector)
+    local isTouching = false
+    local timer
+    local pos = PlayerManager:getClientPlayer():getPosition()
+
+    local function movePlayer()
+        if isTouching then
+            pos = PlayerManager:getClientPlayer():getPosition()
+            PlayerManager:getClientPlayer().Player:moveEntity(moveVector)
+        end
+    end
+
+    local function startTouch()
+        if not isTouching then
+            isTouching = true
+            timer = LuaTimer:scheduleTimer(movePlayer, 0.1, -1)
+        end
+    end
+
+    local function stopTouch()
+        isTouching = false
+        if timer then
+            LuaTimer:cancel(timer)
+            timer = nil
+        end
+    end
+
+    button:registerEvent(GUIEvent.TouchDown, startTouch)
+    button:registerEvent(GUIEvent.TouchMove, movePlayer)
+    button:registerEvent(GUIEvent.TouchUp, stopTouch)
+    button:registerEvent(GUIEvent.LongTouchStart, startTouch)
+    button:registerEvent(GUIEvent.LongTouchEnd, stopTouch)
+    button:registerEvent(GUIEvent.Click, startTouch)
+    button:registerEvent(GUIEvent.DoubleClick, startTouch)
+    button:registerEvent(GUIEvent.DragStart, startTouch)
+    button:registerEvent(GUIEvent.Dragging, movePlayer)
+    button:registerEvent(GUIEvent.DragEnd, stopTouch)
+    button:registerEvent(GUIEvent.Release, stopTouch)
+end
+
+function GMHelper:Fly(button)
+    self.DevFlyEnabled = not self.DevFlyEnabled
+    _G["togDevFly"] = self.DevFlyEnabled
+
+    self.isFlying = self.isFlying or false
+
+    if not self.flySpeedTimer then
+        self.flySpeedTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer().Player
+            if player then
+                if player:getIsFlying() then
+                    player:setSpeedAdditionLevel(15000)
+                else
+                    player:setSpeedAdditionLevel(0)
+                end
+            end
+        end, 50, -1)
+    end
+
+    if not self.flyButton then
+        self.flyButton = GUIManager:createGUIWindow(GUIType.Button, "GUIRoot-FlyHack")
+        self.flyButton:SetHorizontalAlignment(HorizontalAlignment.Center)
+        self.flyButton:SetVerticalAlignment(VerticalAlignment.Center)
+        self.flyButton:SetHeight({0, 55})
+        self.flyButton:SetWidth({0, 55})
+        self.flyButton:SetXPosition({0, 722})
+        self.flyButton:SetYPosition({0, 93})
+
+        local UpBtn = GUIManager:getWindowByName("Main-Down")
+        createButtonHandler(UpBtn, VectorUtil.newVector3(0, -0.0020, 0))
+        local DownBtn = GUIManager:getWindowByName("Main-Up")
+        createButtonHandler(DownBtn, VectorUtil.newVector3(0, 0.0020, 0))
+
+        self.flyButton:registerEvent(GUIEvent.ButtonClick, function()
+            self.fly = LuaTimer:scheduleTimer(function()
+                if PlayerManager:getClientPlayer().Player:getIsFlying() then        
+                    self.flyButton:SetVisible(false)   
+                else 
+                    self.flyButton:SetVisible(true)
+                end
+            end, 50, -1)
+            local player = PlayerManager:getClientPlayer().Player
+            local moveDir = VectorUtil.newVector3(0.0, 1.35, 0.0)
+            player:setAllowFlying(true)
+            player:setFlying(true)
+            player:moveEntity(moveDir)
+        end)
+
+        GUISystem.Instance():GetRootWindow():AddChildWindow(self.flyButton)
+    end
+
+    if self.DevFlyEnabled then
+        self.flyButton:SetNormalImage("set:fly_control.json image:luodi")
+        self.flyButton:SetPushedImage("set:fly_control.json image:luodi")
+        self.flyButton:SetVisible(true)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Enabled")
+    else
+        self.flyButton:SetNormalImage("")
+        self.flyButton:SetPushedImage("")
+        self.flyButton:SetVisible(false)
+        local player = PlayerManager:getClientPlayer().Player
+        player:setAllowFlying(false)
+        player:setFlying(false)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^00FF00Disabled")
+    end
+end
+
+function GMHelper:NoFallDmg(button)
+    self.noFallDamageEnabled = not self.noFallDamageEnabled
+
+    local playerWrapper = PlayerManager:getClientPlayer()
+    local player = playerWrapper and playerWrapper.Player
+    if not player then return end
+
+    if not self.noFallDamageEnabled then
+        if self.noFallDamageTimer then
+            LuaTimer:cancel(self.noFallDamageTimer)
+            self.noFallDamageTimer = nil
+        end
+        if self.fallDamageProtectionTimer then
+            LuaTimer:cancel(self.fallDamageProtectionTimer)
+            self.fallDamageProtectionTimer = nil
+        end
+        player.noClip = false
+        self.previousY = nil
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+        return
+    end
+
+    button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+    UIHelper.showToast("^00FF00Enabled")
+
+    local FALL_THRESHOLD = 1.0
+    local FALL_DISTANCE_MIN = 3
+    local RANGE_CHECK = 2
+    local SAFE_HEIGHT_OFFSET = 1.3
+    local TEMP_BLOCK_Y_OFFSET = 0.1
+    local TEMP_BLOCK_ID = 8
+
+    self.noFallDamageTimer = LuaTimer:scheduleTimer(function()
+        local pos = player:getPosition()
+        if not pos then return end
+        local currentY = pos.y
+        if not self.previousY then
+            self.previousY = currentY
+            return
+        end
+        local isFalling = currentY < self.previousY - FALL_THRESHOLD
+        player.noClip = isFalling
+        self.previousY = currentY
+    end, 80, -1)
+
+    self.fallDamageProtectionTimer = LuaTimer:scheduleTimer(function()
+        if not player or not player.fallDistance then return end
+        local fallDistance = player.fallDistance
+        if fallDistance <= FALL_DISTANCE_MIN then return end
+
+        local pos = player:getPosition()
+        if not pos then return end
+
+        local foundBlock = false
+        local blockBelow = nil
+
+        for dy = 1, RANGE_CHECK do
+            local checkPos = VectorUtil.newVector3(pos.x, pos.y - dy, pos.z)
+            local blockId = EngineWorld:getBlockId(checkPos)
+            if blockId and blockId ~= 0 then
+                foundBlock = true
+                blockBelow = checkPos
+                break
+            end
+        end
+
+        if foundBlock and pos.y <= blockBelow.y + 1.0 then
+            player.noClip = true
+            local safeY = blockBelow.y + SAFE_HEIGHT_OFFSET
+            player:setPosition(VectorUtil.newVector3(pos.x, safeY, pos.z))
+            local tempBlockPos = VectorUtil.newVector3(pos.x, safeY - TEMP_BLOCK_Y_OFFSET, pos.z)
+            EngineWorld:setBlock(tempBlockPos, TEMP_BLOCK_ID)
+            EngineWorld:setBlockToAir(tempBlockPos)
+            player.noClip = false
+        end
+    end, 30, -1)
+end
+
+function GMHelper:Speed(button)
+    self.speedEnabled = not self.speedEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    local speedLevel = self.speedEnabled and 15000 or 7
+    player.Player:setSpeedAdditionLevel(speedLevel)
+    if self.speedEnabled then
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Speed Enabled")
+    else
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Speed Disabled")
+    end
+end
+
+local FastJumpToggle = false
+local FastJumpPerm = nil
+
+function GMHelper:FastJump(button)
+    self.FastJumpEnabled = not self.FastJumpEnabled
+    FastJumpToggle = not FastJumpToggle
+
+    local playerWrapper = PlayerManager:getClientPlayer()
+    if not playerWrapper or not playerWrapper.Player then return end
+    local player = playerWrapper.Player
+
+    if FastJumpToggle then
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Enabled")
+        ClientHelper.putBoolPrefs("EnableDoubleJumps", true)
+
+        if FastJumpPerm then
+            LuaTimer:cancel(FastJumpPerm)
+        end
+
+        FastJumpPerm = LuaTimer:scheduleTimer(function()
+            local p = PlayerManager:getClientPlayer()
+            if p and p.Player then
+                p.Player.m_keepJumping = false
+            end
+        end, 0.05, -1)
+    else
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+        ClientHelper.putBoolPrefs("EnableDoubleJumps", false)
+
+        if FastJumpPerm then
+            LuaTimer:cancel(FastJumpPerm)
+            FastJumpPerm = nil
+        end
+
+        player.m_keepJumping = true
+    end
+end
+
+function GMHelper:Phase(button)
+    self.phaseEnabled = not self.phaseEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.phaseEnabled then
+        player.Player.noClip = true
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Phase Enabled")
+    else
+        player.Player.noClip = false
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Phase Disabled")
+    end
+end
+
+function GMHelper:Jesus(button)
+    self.jesusEnabled = not self.jesusEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.jesusEnabled then
+        if self.jesusTimer then LuaTimer:cancel(self.jesusTimer) end
+        self.jesusTimer = LuaTimer:scheduleTimer(function()
+            player.Player.onGround = true
+        end, 10, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Jesus Enabled")
+    else
+        if self.jesusTimer then LuaTimer:cancel(self.jesusTimer) self.jesusTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Jesus Disabled")
+    end
+end
+
+function GMHelper:KillAura(button)
+    self.killauraEnabled = not self.killauraEnabled
+    if self.killauraEnabled then
+        if self.killauraTimer then LuaTimer:cancel(self.killauraTimer) end
+        self.killauraTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        if clientPlayer.Player:getTeamId() ~= player:getTeamId() then
+                            local distance = Vector3.Distance(clientPlayer.Player.position, player.Player.position)
+                            if distance <= 60 then
+                                player.Player:takeDamage(20)
+                            end
+                        end
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Kill Aura Enabled")
+    else
+        if self.killauraTimer then LuaTimer:cancel(self.killauraTimer) self.killauraTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Kill Aura Disabled")
+    end
+end
+
+function GMHelper:AimBot(button)
+    self.AimBotEnabled = not self.AimBotEnabled
+
+    if self.AimBotTimer then
+        LuaTimer:cancel(self.AimBotTimer)
+        self.AimBotTimer = nil
+    end
+
+    if not self.AimBotEnabled then
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+        return
+    end
+
+    button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+    UIHelper.showToast("^00FF00Enabled")
+
+    self.AimBotTimer = LuaTimer:scheduleTimer(function()
+        local me = PlayerManager:getClientPlayer()
+        if not me or not me.Player then return end
+
+        local myPos = me.Player:getPosition()
+        local players = PlayerManager:getPlayers()
+
+        local closestDistance, closestPlayer = math.huge, nil
+        for _, player in pairs(players) do
+            if player ~= me and player:getHealth() > 0 then
+                local playerPos = player:getPosition()
+                local distance = MathUtil:distanceSquare2d(playerPos, myPos)
+                if distance < closestDistance then
+                    closestDistance, closestPlayer = distance, player
+                end
+            end
+        end
+
+        if closestPlayer and closestDistance < 10 then
+            local health = math.min(closestPlayer:getHealth(), 50.0)
+            UIHelper.showToast("^FF00EEPlayers Hp: " .. string.format("%.1f ❤", health))
+
+            local camera = SceneManager.Instance():getMainCamera()
+            local camPos = camera:getPosition()
+            local dir = VectorUtil.sub3(closestPlayer:getPosition(), camPos)
+
+            local yaw = math.atan2(dir.x, dir.z) / math.pi * -180
+            local distXZ = math.sqrt(dir.x * dir.x + dir.z * dir.z)
+            local pitch = -math.atan2(dir.y, distXZ) / math.pi * 180
+
+            me.Player.rotationYaw = yaw or 0
+            me.Player.rotationPitch = pitch or 0
+        end
+    end, 1, -1)
+end
+
+function GMHelper:Tracers(button)
+    self.tracerEnabled = not self.tracerEnabled
+    local me = PlayerManager:getClientPlayer()
+
+    if not self.tracerEnabled then
+        if self.tracerTimer then
+            LuaTimer:cancel(self.tracerTimer)
+            self.tracerTimer = nil
+        end
+        if me and me.Player then
+            me.Player:deleteAllGuideArrow()
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Tracer Disabled")
+        return
+    end
+
+    if self.tracerTimer then LuaTimer:cancel(self.tracerTimer) end
+    self.tracerTimer = LuaTimer:scheduleTimer(function()
+        if me and me.Player then
+            me.Player:deleteAllGuideArrow()
+            local others = PlayerManager:getPlayers()
+            for _, c_player in pairs(others) do
+                if c_player ~= me then
+                    me.Player:addGuideArrow(c_player:getPosition())
+                end
+            end
+        end
+    end, 500, -1)
+
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00Tracer Enabled")
+end
+
+
+local processedPlayers = {}
+local predefinedColors = {
+    {1, 0, 0, 1},
+    {0, 1, 0, 1},
+    {0, 0, 1, 1},
+    {1, 1, 0, 1},
+    {1, 0, 1, 1},
+    {0, 1, 1, 1},
+    {0.5, 0.5, 0.5, 1},
+    {1, 0.5, 0, 1},
+    {0.5, 0, 0.5, 1},
+    {0, 0.5, 0.5, 1},
+    {0.7, 0.2, 0.2, 1},
+    {0.2, 0.7, 0.2, 1},
+    {0.2, 0.2, 0.7, 1},
+    {0.8, 0.6, 0.1, 1},
+    {0.6, 0.1, 0.8, 1},
+    {0.3, 0.8, 0.5, 1},
+}
+local colorIndex = 1
+
+function GMHelper:ESP(button)
+    self.espEnabled = not self.espEnabled
+    local myclient = PlayerManager:getClientPlayer()
+
+    if not self.espEnabled then
+        if self.espTimer then
+            LuaTimer:cancel(self.espTimer)
+            self.espTimer = nil
+        end
+        local players = PlayerManager:getPlayers()
+        for _, p in pairs(players) do
+            if p.Player then
+                p.Player:disableXRay()
+            end
+        end
+        processedPlayers = {}
+        colorIndex = 1
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000ESP Disabled")
+        return
+    end
+
+    if self.espTimer then LuaTimer:cancel(self.espTimer) end
+    self.espTimer = LuaTimer:scheduleTimer(function()
+        local players = PlayerManager:getPlayers()
+        for _, p in pairs(players) do
+            if myclient and p.userId ~= myclient.userId and p.Player and not processedPlayers[p.userId] then
+                local color = predefinedColors[colorIndex]
+                p.Player:enableXRay(color)
+                processedPlayers[p.userId] = true
+                colorIndex = (colorIndex % #predefinedColors) + 1
+            end
+        end
+    end, 200, -1)
+
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00ESP Enabled")
+end
+
+function GMHelper:Scaffold(button)
+    self.scaffoldEnabled = not self.scaffoldEnabled
+    local me = PlayerManager:getClientPlayer()
+
+    if not self.scaffoldEnabled then
+        if self.scaffoldTimer then
+            LuaTimer:cancel(self.scaffoldTimer)
+            self.scaffoldTimer = nil
+        end
+        ClientHelper.putIntPrefs("SprintLimitCheck", 0)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Scaffold Disabled")
+        return
+    end
+
+    if self.scaffoldTimer then LuaTimer:cancel(self.scaffoldTimer) end
+    ClientHelper.putIntPrefs("SprintLimitCheck", 1)
+    self.scaffoldTimer = LuaTimer:scheduleTimer(function()
+        if me and me.Player then
+            local pos = me:getPosition()
+            if pos then
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x, pos.y - 2, pos.z), 5)
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x, pos.y - 2, pos.z + 1), 5)
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x, pos.y - 2, pos.z - 1), 5)
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x + 1, pos.y - 2, pos.z), 5)
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x - 1, pos.y - 2, pos.z), 5)
+                EngineWorld:setBlock(VectorUtil.newVector3(pos.x, pos.y + 2, pos.z), 5)
+            end
+        end
+    end, 100, -1)
+
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00Scaffold Enabled")
+end
+
+function GMHelper:Nuker(button)
+    self.nukerEnabled = not self.nukerEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.nukerEnabled then
+        if self.nukerTimer then LuaTimer:cancel(self.nukerTimer) end
+        self.nukerTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            for x = -3, 3 do
+                for y = -2, 2 do
+                    for z = -3, 3 do
+                        local blockX = math.floor(pos.x + x)
+                        local blockY = math.floor(pos.y + y)
+                        local blockZ = math.floor(pos.z + z)
+                        WorldManager:setBlock(blockX, blockY, blockZ, 0)
+                    end
+                end
+            end
+        end, 200, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Nuker Enabled")
+    else
+        if self.nukerTimer then LuaTimer:cancel(self.nukerTimer) self.nukerTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Nuker Disabled")
+    end
+end
+
+function GMHelper:Freecam(button)
+    self.freecamEnabled = not self.freecamEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.freecamEnabled then
+        self.originalPos = player.Player.position
+        player.Player.noClip = true
+        player.Player.visible = false
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Freecam Enabled")
+    else
+        if self.originalPos then
+            player.Player.position = self.originalPos
+        end
+        player.Player.noClip = false
+        player.Player.visible = true
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Freecam Disabled")
+    end
+end
+
+function GMHelper:AutoClicker(button)
+    self.autoClickerEnabled = not self.autoClickerEnabled
+
+    if self.autoClickerEnabled then
+        if self.autoClickerTimer then LuaTimer:cancel(self.autoClickerTimer) end
+
+        self.autoClickerTimer = LuaTimer:scheduleTimer(function()
+            CGame.Instance():handleTouchClick(800, 360)
+        end, 200, -1)
+
+        button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+        UIHelper.showToast("^00FF00Enabled")
+    else
+        if self.autoClickerTimer then
+            LuaTimer:cancel(self.autoClickerTimer)
+            self.autoClickerTimer = nil
+        end
+        button:SetBackgroundColor({0.2, 0.2, 0.3, 0.8})
+        UIHelper.showToast("^FF0000Disabled")
+    end
+end
+
+function GMHelper:Glide(button)
+    self.glideEnabled = not self.glideEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.glideEnabled then
+        if self.glideTimer then LuaTimer:cancel(self.glideTimer) end
+        self.glideTimer = LuaTimer:scheduleTimer(function()
+            if player.Player.velocity.y < 0 then
+                player.Player.velocity = {x = player.Player.velocity.x, y = -0.1, z = player.Player.velocity.z}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Glide Enabled")
+    else
+        if self.glideTimer then LuaTimer:cancel(self.glideTimer) self.glideTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Glide Disabled")
+    end
+end
+
+function GMHelper:WallClimb(button)
+    self.wallClimbEnabled = not self.wallClimbEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.wallClimbEnabled then
+        if self.wallClimbTimer then LuaTimer:cancel(self.wallClimbTimer) end
+        self.wallClimbTimer = LuaTimer:scheduleTimer(function()
+            if player.Player.horizontalCollision then
+                player.Player.velocity = {x = 0, y = 0.5, z = 0}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Wall Climb Enabled")
+    else
+        if self.wallClimbTimer then LuaTimer:cancel(self.wallClimbTimer) self.wallClimbTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Wall Climb Disabled")
+    end
+end
+
+function GMHelper:Spider(button)
+    self.spiderEnabled = not self.spiderEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+
+    if self.spiderEnabled then
+        if self.spiderTimer then LuaTimer:cancel(self.spiderTimer) end
+        self.spiderTimer = LuaTimer:scheduleTimer(function()
+            local p = player.Player
+            if p.horizontalCollision then
+                local vel = p:getVelocity()
+                p:setVelocity({x = vel.x, y = 0.25, z = vel.z})
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Spider Enabled")
+    else
+        if self.spiderTimer then 
+            LuaTimer:cancel(self.spiderTimer) 
+            self.spiderTimer = nil 
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Spider Disabled")
+    end
+end
+
+local CannonEnabled = false
+local CannonTimer, SoundLoop
+
+function GMHelper:JetPack(button)
+    local canon = GUIManager:getWindowByName("Main-Cannon")
+    if not canon then return end
+
+    CannonEnabled = not CannonEnabled
+
+    if not CannonEnabled then
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+        canon:SetVisible(false)
+        return
+    end
+
+    button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+    UIHelper.showToast("^00FF00Enabled")
+    canon:SetVisible(true)
+
+    local scale = 0.5
+    canon:SetScale(VectorUtil.newVector3(scale, scale, scale))
+    LuaTimer:scheduleTicker(function()
+        if scale <= 1 then
+            scale = scale + 0.05
+        else
+            scale = scale - 0.0125
+        end
+        canon:SetScale(VectorUtil.newVector3(scale, scale, scale))
+    end, 1, 15)
+
+    canon:registerEvent(GUIEvent.ButtonClick, function()
+        local clientPlayer = PlayerManager:getClientPlayer()
+        if clientPlayer and clientPlayer.Player then
+            local pitch = clientPlayer.Player:getPitch()
+            local yaw = clientPlayer.Player:getYaw()
+            local pitchRad = math.rad(pitch)
+            local yawRad = math.rad(-yaw)
+            local x = math.cos(pitchRad) * math.sin(yawRad) * 3
+            local y = -math.sin(pitchRad) * 4
+            local z = math.cos(pitchRad) * math.cos(yawRad) * 3
+            local newPos = VectorUtil.newVector3(x, y, z)
+            clientPlayer.Player:setVelocity(newPos)
+        end
+    end)
+
+    canon:setEnableLongTouch(true)
+
+    canon:registerEvent(GUIEvent.LongTouchStart, function()
+        SoundLoop = LuaTimer:scheduleTicker(function()
+            SoundUtil.playSound(0)
+        end, 100)
+        CannonTimer = LuaTimer:scheduleTimer(function()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                local yaw = clientPlayer.Player:getYaw()
+                local pitch = clientPlayer.Player:getPitch()
+                local yawRad = math.rad(yaw)
+                local pitchRad = math.rad(pitch)
+                local speed = 1.7
+                local x = -speed * math.cos(pitchRad) * math.sin(yawRad)
+                local y = -speed * math.sin(pitchRad)
+                local z = speed * math.cos(pitchRad) * math.cos(yawRad)
+                local velocity = VectorUtil.newVector3(x, y, z)
+                clientPlayer.Player:setVelocity(velocity)
+            end
+        end, 5, 200000)
+    end)
+
+    canon:registerEvent(GUIEvent.LongTouchEnd, function()
+        if CannonTimer then
+            LuaTimer:cancel(CannonTimer)
+            CannonTimer = nil
+        end
+        if SoundLoop then
+            LuaTimer:cancel(SoundLoop)
+            SoundLoop = nil
+        end
+    end)
+end
+
+function GMHelper:Bhop(button)
+    self.bhopEnabled = not self.bhopEnabled
+    local clientPlayer = PlayerManager:getClientPlayer()
+    if not clientPlayer or not clientPlayer.Player then return end
+    local player = clientPlayer.Player
+
+    if not self.bhopEnabled then
+        if self.bhopTimer then
+            LuaTimer:cancel(self.bhopTimer)
+            self.bhopTimer = nil
+        end
+        button:SetBackgroundColor({0.2, 0.2, 0.3, 0.8})
+        UIHelper.showToast("^FF0000Bhop Disabled")
+        return
+    end
+
+    if self.bhopTimer then LuaTimer:cancel(self.bhopTimer) end
+    self.bhopTimer = LuaTimer:scheduleTimer(function()
+        if player:getOnGround() then
+            player:jump()
+        end
+    end, 50, -1)
+
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00Bhop Enabled")
+end
+
+function GMHelper:LongJump(button)
+    ZentexEnabled = not ZentexEnabled
+    local clientPlayer = PlayerManager:getClientPlayer()
+    local player = clientPlayer and clientPlayer.Player
+
+    if ZentexEnabled then
+        SoundUtil.playSound(8)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Enabled")
+        if player then
+            player:setFloatProperty("JumpSpeed", 25)
+        end
+
+        LuaTimer:cancel(self.timer)
+        self.timer = LuaTimer:scheduleTimer(function()
+            if player then
+                player:setGlide(true)
+            end
+        end, 1, -1)
+    else
+        SoundUtil.playSound(207)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+        LuaTimer:cancel(self.timer)
+        if player then
+            player:setFloatProperty("JumpSpeed", 1)
+        end
+    end
+end
+
+function GMHelper:AntiKnockback(button)
+    self.antiKnockbackEnabled = not self.antiKnockbackEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.antiKnockbackEnabled then
+        if self.antiKnockbackTimer then LuaTimer:cancel(self.antiKnockbackTimer) end
+        self.antiKnockbackTimer = LuaTimer:scheduleTimer(function()
+            player.Player.knockbackResistance = 1.0
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Anti-Knockback Enabled")
+    else
+        if self.antiKnockbackTimer then LuaTimer:cancel(self.antiKnockbackTimer) self.antiKnockbackTimer = nil end
+        player.Player.knockbackResistance = 0.0
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Anti-Knockback Disabled")
+    end
+end
+
+function GMHelper:Velocity(button)
+    self.velocityEnabled = not self.velocityEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.velocityEnabled then
+        if self.velocityTimer then LuaTimer:cancel(self.velocityTimer) end
+        self.velocityTimer = LuaTimer:scheduleTimer(function()
+            player.Player.velocity = {x = 0, y = 0, z = 0}
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Velocity Enabled")
+    else
+        if self.velocityTimer then LuaTimer:cancel(self.velocityTimer) self.velocityTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Velocity Disabled")
+    end
+end
+
+function GMHelper:Criticals(button)
+    self.criticalsEnabled = not self.criticalsEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.criticalsEnabled then
+        if self.criticalsTimer then LuaTimer:cancel(self.criticalsTimer) end
+        self.criticalsTimer = LuaTimer:scheduleTimer(function()
+            player.Player.fallDistance = 3.0
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Criticals Enabled")
+    else
+        if self.criticalsTimer then LuaTimer:cancel(self.criticalsTimer) self.criticalsTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Criticals Disabled")
+    end
+end
+
+function GMHelper:Reach(button)
+    self.reachEnabled = not self.reachEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.reachEnabled then
+        player.Player.attackReach = 10.0
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Reach Enabled")
+    else
+        player.Player.attackReach = 3.0
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Reach Disabled")
+    end
+end
+
+function GMHelper:AutoBlock(button)
+    self.autoBlockEnabled = not self.autoBlockEnabled
+    if self.autoBlockEnabled then
+        if self.autoBlockTimer then LuaTimer:cancel(self.autoBlockTimer) end
+        self.autoBlockTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        local distance = Vector3.Distance(clientPlayer.Player.position, player.Player.position)
+                        if distance <= 5 then
+                            InputManager:simulateRightClick()
+                        end
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Block Enabled")
+    else
+        if self.autoBlockTimer then LuaTimer:cancel(self.autoBlockTimer) self.autoBlockTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Block Disabled")
+    end
+end
+
+function GMHelper:TriggerBot(button)
+    self.triggerBotEnabled = not self.triggerBotEnabled
+    if self.triggerBotEnabled then
+        if self.triggerBotTimer then LuaTimer:cancel(self.triggerBotTimer) end
+        self.triggerBotTimer = LuaTimer:scheduleTimer(function()
+            local targetEntity = CameraManager:getTargetEntity()
+            if targetEntity and targetEntity.Player then
+                local clientPlayer = PlayerManager:getClientPlayer()
+                if clientPlayer and clientPlayer.Player:getTeamId() ~= targetEntity:getTeamId() then
+                    InputManager:simulateClick()
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Trigger Bot Enabled")
+    else
+        if self.triggerBotTimer then LuaTimer:cancel(self.triggerBotTimer) self.triggerBotTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Trigger Bot Disabled")
+    end
+end
+
+function GMHelper:AutoWeapon(button)
+    self.autoWeaponEnabled = not self.autoWeaponEnabled
+    if self.autoWeaponEnabled then
+        if self.autoWeaponTimer then LuaTimer:cancel(self.autoWeaponTimer) end
+        self.autoWeaponTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local inventory = player.Player.inventory
+                for i = 0, 8 do
+                    local item = inventory:getItem(i)
+                    if item and (item.name:find("sword") or item.name:find("axe")) then
+                        player.Player.selectedSlot = i
+                        break
+                    end
+                end
+            end
+        end, 200, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Weapon Enabled")
+    else
+        if self.autoWeaponTimer then LuaTimer:cancel(self.autoWeaponTimer) self.autoWeaponTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Weapon Disabled")
+    end
+end
+
+function GMHelper:TargetStrafe(button)
+    self.targetStrafeEnabled = not self.targetStrafeEnabled
+    if self.targetStrafeEnabled then
+        if self.targetStrafeTimer then LuaTimer:cancel(self.targetStrafeTimer) self.targetStrafeTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Target Strafe Disabled")
+    end
+end
+
+function GMHelper:SilentAim(button)
+    self.silentAimEnabled = not self.silentAimEnabled
+    if self.silentAimEnabled then
+        if self.silentAimTimer then LuaTimer:cancel(self.silentAimTimer) end
+        self.silentAimTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        if clientPlayer.Player:getTeamId() ~= player:getTeamId() then
+                            local distance = Vector3.Distance(clientPlayer.Player.position, player.Player.position)
+                            if distance <= 15 then
+                                local originalYaw = clientPlayer.Player.yaw
+                                local originalPitch = clientPlayer.Player.pitch
+                                clientPlayer.Player:lookAt(player.Player.position)
+                                InputManager:simulateClick()
+                                clientPlayer.Player.yaw = originalYaw
+                                clientPlayer.Player.pitch = originalPitch
+                            end
+                        end
+                    end
+                end
+            end
+        end, 150, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Silent Aim Enabled")
+    else
+        if self.silentAimTimer then LuaTimer:cancel(self.silentAimTimer) self.silentAimTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Silent Aim Disabled")
+    end
+end
+
+function GMHelper:Nametags(button)
+    self.nametagsEnabled = not self.nametagsEnabled
+    if self.nametagsEnabled then
+        if self.nametagsTimer then LuaTimer:cancel(self.nametagsTimer) end
+        self.nametagsTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        local distance = Vector3.Distance(clientPlayer.Player.position, player.Player.position)
+                        local nameTag = player.Player.name .. " [" .. math.floor(distance) .. "m]"
+                        RenderHelper:drawText(nameTag, player.Player.position, {1, 1, 1, 1})
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Nametags Enabled")
+    else
+        if self.nametagsTimer then LuaTimer:cancel(self.nametagsTimer) self.nametagsTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Nametags Disabled")
+    end
+end
+
+function GMHelper:Fullbright(button)
+    self.fullbrightEnabled = not self.fullbrightEnabled
+    if self.fullbrightEnabled then
+        RenderManager:setGamma(15.0)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Fullbright Enabled")
+    else
+        RenderManager:setGamma(1.0)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Fullbright Disabled")
+    end
+end
+
+function GMHelper:XRay(button)
+    self.xrayEnabled = not self.xrayEnabled
+    if self.xrayEnabled then
+        local xrayBlocks = {"diamond_ore", "iron_ore", "gold_ore", "coal_ore", "redstone_ore", "emerald_ore"}
+        if self.xrayTimer then LuaTimer:cancel(self.xrayTimer) end
+        self.xrayTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local pos = player.Player.position
+                for x = -50, 50 do
+                    for y = -20, 20 do
+                        for z = -50, 50 do
+                            local blockX = math.floor(pos.x + x)
+                            local blockY = math.floor(pos.y + y)
+                            local blockZ = math.floor(pos.z + z)
+                            local block = WorldManager:getBlock(blockX, blockY, blockZ)
+                            if block then
+                                for _, oreType in ipairs(xrayBlocks) do
+                                    if block.name == oreType then
+                                        RenderHelper:highlightBlock(blockX, blockY, blockZ, {1, 0, 1, 0.5})
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end, 500, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00X-Ray Enabled")
+    else
+        if self.xrayTimer then LuaTimer:cancel(self.xrayTimer) self.xrayTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000X-Ray Disabled")
+    end
+end
+
+function GMHelper:Zoom(button)
+    self.zoomEnabled = not self.zoomEnabled
+    if self.zoomEnabled then
+        CameraManager:setFOV(30)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Zoom Enabled")
+    else
+        CameraManager:setFOV(70)
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Zoom Disabled")
+    end
+end
+
+function GMHelper:Chams(button)
+    self.chamsEnabled = not self.chamsEnabled
+    if self.chamsEnabled then
+        if self.chamsTimer then LuaTimer:cancel(self.chamsTimer) end
+        self.chamsTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        player.Player.renderThroughWalls = true
+                        player.Player.chamColor = {1, 0, 0, 0.7}
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Chams Enabled")
+    else
+        if self.chamsTimer then LuaTimer:cancel(self.chamsTimer) self.chamsTimer = nil end
+        local players = PlayerManager:getPlayers()
+        for _, player in ipairs(players) do
+            if player.Player then
+                player.Player.renderThroughWalls = false
+            end
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Chams Disabled")
+    end
+end
+
+function GMHelper:Wallhack(button)
+    self.wallhackEnabled = not self.wallhackEnabled
+    if self.wallhackEnabled then
+        if self.wallhackTimer then LuaTimer:cancel(self.wallhackTimer) end
+        self.wallhackTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        player.Player.alwaysVisible = true
+                    end
+                end
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Wallhack Enabled")
+    else
+        if self.wallhackTimer then LuaTimer:cancel(self.wallhackTimer) self.wallhackTimer = nil end
+        local players = PlayerManager:getPlayers()
+        for _, player in ipairs(players) do
+            if player.Player then
+                player.Player.alwaysVisible = false
+            end
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Wallhack Disabled")
+    end
+end
+
+function GMHelper:Search(button)
+    self.searchEnabled = not self.searchEnabled
+    if self.searchEnabled then
+        local searchBlocks = {"chest", "diamond_ore", "emerald_ore", "spawner"}
+        if self.searchTimer then LuaTimer:cancel(self.searchTimer) end
+        self.searchTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local pos = player.Player.position
+                for x = -30, 30 do
+                    for y = -15, 15 do
+                        for z = -30, 30 do
+                            local blockX = math.floor(pos.x + x)
+                            local blockY = math.floor(pos.y + y)
+                            local blockZ = math.floor(pos.z + z)
+                            local block = WorldManager:getBlock(blockX, blockY, blockZ)
+                            if block then
+                                for _, searchType in ipairs(searchBlocks) do
+                                    if block.name:find(searchType) then
+                                        RenderHelper:highlightBlock(blockX, blockY, blockZ, {0, 1, 1, 0.8})
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end, 1000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Search Enabled")
+    else
+        if self.searchTimer then LuaTimer:cancel(self.searchTimer) self.searchTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Search Disabled")
+    end
+end
+
+function GMHelper:ItemESP(button)
+    self.itemESPEnabled = not self.itemESPEnabled
+    if self.itemESPEnabled then
+        if self.itemESPTimer then LuaTimer:cancel(self.itemESPTimer) end
+        self.itemESPTimer = LuaTimer:scheduleTimer(function()
+            local items = EntityManager:getEntitiesByType("ItemEntity")
+            for _, item in ipairs(items) do
+                if item and item.position then
+                    item.glowEffect = true
+                    item.glowColor = {0, 1, 0, 1}
+                    RenderHelper:drawText(item.itemStack.name, item.position, {1, 1, 1, 1})
+                end
+            end
+        end, 200, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Item ESP Enabled")
+    else
+        if self.itemESPTimer then LuaTimer:cancel(self.itemESPTimer) self.itemESPTimer = nil end
+        local items = EntityManager:getEntitiesByType("ItemEntity")
+        for _, item in ipairs(items) do
+            if item then
+                item.glowEffect = false
+            end
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Item ESP Disabled")
+    end
+end
+
+function GMHelper:StorageESP(button)
+    self.storageESPEnabled = not self.storageESPEnabled
+    if self.storageESPEnabled then
+        if self.storageESPTimer then LuaTimer:cancel(self.storageESPTimer) end
+        self.storageESPTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local pos = player.Player.position
+                local storageBlocks = {"chest", "ender_chest", "shulker_box", "barrel"}
+                for x = -25, 25 do
+                    for y = -10, 10 do
+                        for z = -25, 25 do
+                            local blockX = math.floor(pos.x + x)
+                            local blockY = math.floor(pos.y + y)
+                            local blockZ = math.floor(pos.z + z)
+                            local block = WorldManager:getBlock(blockX, blockY, blockZ)
+                            if block then
+                                for _, storageType in ipairs(storageBlocks) do
+                                    if block.name:find(storageType) then
+                                        RenderHelper:highlightBlock(blockX, blockY, blockZ, {1, 1, 0, 0.6})
+                                        local blockPos = {x = blockX, y = blockY + 1, z = blockZ}
+                                        RenderHelper:drawText(storageType:upper(), blockPos, {1, 1, 0, 1})
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end, 500, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Storage ESP Enabled")
+    else
+        if self.storageESPTimer then LuaTimer:cancel(self.storageESPTimer) self.storageESPTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Storage ESP Disabled")
+    end
+end
+
+function GMHelper:Tower(button)
+    self.towerEnabled = not self.towerEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.towerEnabled then
+        if self.towerTimer then LuaTimer:cancel(self.towerTimer) end
+        self.towerTimer = LuaTimer:scheduleTimer(function()
+            if InputManager:isKeyPressed("space") then
+                local pos = player.Player.position
+                local blockPos = {x = math.floor(pos.x), y = math.floor(pos.y - 1), z = math.floor(pos.z)}
+                WorldManager:setBlock(blockPos.x, blockPos.y, blockPos.z, 1)
+                player.Player.velocity = {x = 0, y = 0.5, z = 0}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Tower Enabled")
+    else
+        if self.towerTimer then LuaTimer:cancel(self.towerTimer) self.towerTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Tower Disabled")
+    end
+end
+
+function GMHelper:FastBreak(button)
+    self.fastBreakEnabled = not self.fastBreakEnabled
+
+    local blocksToHide = {66, 253, 1, 5, 10, 20, 35}
+
+    if self.fastBreakEnabled then
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Enabled")
+
+        for _, blockId in ipairs(blocksToHide) do
+            local block = cBlockManager.cGetBlockById(blockId)
+            if block then block:setNeedRender(true) end
+        end
+
+        for blockId = 1, 40000 do
+            local block = BlockManager.getBlockById(blockId)
+            if block then block:setHardness(nil) end
+        end
+    else
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Disabled")
+
+        for _, blockId in ipairs(blocksToHide) do
+            local block = cBlockManager.cGetBlockById(blockId)
+            if block then block:setNeedRender(true) end
+        end
+
+        for blockId = 1, 40000 do
+            local block = BlockManager.getBlockById(blockId)
+            if block then block:setHardness(1) end
+        end
+    end
+end
+
+function GMHelper:AutoMine(button)
+    self.autoMineEnabled = not self.autoMineEnabled
+    if self.autoMineEnabled then
+        if self.autoMineTimer then LuaTimer:cancel(self.autoMineTimer) end
+        self.autoMineTimer = LuaTimer:scheduleTimer(function()
+            local targetBlock = CameraManager:getTargetBlock()
+            if targetBlock then
+                WorldManager:breakBlock(targetBlock.x, targetBlock.y, targetBlock.z)
+            end
+        end, 100, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Mine Enabled")
+    else
+        if self.autoMineTimer then LuaTimer:cancel(self.autoMineTimer) self.autoMineTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Mine Disabled")
+    end
+end
+
+
+
+function GMHelper:AntiDeath(button)
+    self.unDeathEnabled = not self.unDeathEnabled
+
+    if not self._unDeathState then
+        self._unDeathState = { lastRespawnTime = 0, callback = nil }
+    end
+    local state = self._unDeathState
+
+    if not self.unDeathEnabled then
+        if state.callback then
+            CEvents.LuaPlayerDeathEvent:unregisterCallBack(state.callback)
+            state.callback = nil
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000UnDeath Disabled")
+        return
+    end
+
+    local cooldown, stepSize, safeHeight, maxHeight = 2000, 18, 165, 256
+    local scheduleDelay, respawnDelay, syncDelay, syncRepeat, postRespawnDelay, playerOffset = 0.015, 400, 1, 1000, 0.05, 1.3
+
+    local function nowMillis()
+        return os.time() * 1000
+    end
+
+    local function findSafePosition(pos)
+        while EngineWorld:getBlockId(pos) ~= BlockID.AIR
+           or EngineWorld:getBlockId(VectorUtil.newVector3(pos.x, pos.y + 1, pos.z)) ~= BlockID.AIR do
+            pos.y = pos.y + 1
+            if pos.y > maxHeight then break end
+        end
+        return pos
+    end
+
+    local function stepTowards(current, target, step)
+        if math.abs(target - current) <= step then return target end
+        return current + (target > current and step or -step)
+    end
+
+    local function moveToTarget(targetPos)
+        local wrapper = PlayerManager:getClientPlayer()
+        if not wrapper or not wrapper.Player then return end
+        local player = wrapper.Player
+        local currentPos = player:getPosition()
+        if currentPos.y < safeHeight then currentPos.y = safeHeight end
+
+        currentPos.x = stepTowards(currentPos.x, targetPos.x, stepSize)
+        currentPos.z = stepTowards(currentPos.z, targetPos.z, stepSize)
+
+        player:setPosition(currentPos)
+        if currentPos.x ~= targetPos.x or currentPos.z ~= targetPos.z then
+            LuaTimer:scheduleTimer(function()
+                moveToTarget(targetPos)
+            end, scheduleDelay, 1)
+        else
+            targetPos = findSafePosition(targetPos)
+            local finalPos = VectorUtil.newVector3(targetPos.x, targetPos.y + playerOffset, targetPos.z)
+            player.noClip = true
+            player:setPosition(finalPos)
+            player.noClip = false
+            LuaTimer:scheduleOnce(function()
+                ClientHelper.putBoolPrefs("SyncClientPositionToServer", true)
+            end, postRespawnDelay)
+        end
+    end
+
+    state.callback = function(deadPlayerId)
+        local currentTime = nowMillis()
+        if deadPlayerId ~= CGame.Instance():getPlatformUserId() then return end
+        if currentTime - state.lastRespawnTime < cooldown then return end
+        state.lastRespawnTime = currentTime
+
+        LuaTimer:scheduleTimer(function()
+            ClientHelper.putBoolPrefs("SyncClientPositionToServer", true)
+        end, syncDelay, syncRepeat)
+
+        local wrapper = PlayerManager:getClientPlayer()
+        if not wrapper or not wrapper.Player then return end
+        local player = wrapper.Player
+        local savedPos = player:getPosition()
+
+        if PacketSender and PacketSender.getSender then
+            PacketSender:getSender():sendRebirth()
+        end
+
+        player:setAllowFlying(true)
+        player:setFlying(true)
+
+        LuaTimer:schedule(function()
+            moveToTarget(VectorUtil.newVector3(savedPos.x, savedPos.y, savedPos.z))
+        end, respawnDelay)
+    end
+
+    CEvents.LuaPlayerDeathEvent:registerCallBack(state.callback)
+    button:SetBackgroundColor({0.1, 0.7, 0.2, 0.9})
+    UIHelper.showToast("^00FF00UnDeath Enabled")
+end
+
+function GMHelper:AutoFarm(button)
+    self.autoFarmEnabled = not self.autoFarmEnabled
+    if self.autoFarmEnabled then
+        if self.autoFarmTimer then LuaTimer:cancel(self.autoFarmTimer) end
+        self.autoFarmTimer = LuaTimer:scheduleTimer(function()
+            local player = PlayerManager:getClientPlayer()
+            if player and player.Player then
+                local pos = player.Player.position
+                local farmBlocks = {"wheat", "carrots", "potatoes", "beetroots"}
+                for x = -5, 5 do
+                    for z = -5, 5 do
+                        local blockX = math.floor(pos.x + x)
+                        local blockY = math.floor(pos.y - 1)
+                        local blockZ = math.floor(pos.z + z)
+                        local block = WorldManager:getBlock(blockX, blockY, blockZ)
+                        if block then
+                            for _, farmType in ipairs(farmBlocks) do
+                                if block.name:find(farmType) and block.age >= 7 then
+                                    WorldManager:breakBlock(blockX, blockY, blockZ)
+                                    WorldManager:setBlock(blockX, blockY, blockZ, block.id)
+                                end
+                            end
+                        end
+                    end
+                end
+            end
+        end, 2000, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Farm Enabled")
+    else
+        if self.autoFarmTimer then LuaTimer:cancel(self.autoFarmTimer) self.autoFarmTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Farm Disabled")
+    end
+end
+
+function GMHelper:LiquidWalk(button)
+    self.liquidWalkEnabled = not self.liquidWalkEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.liquidWalkEnabled then
+        if self.liquidWalkTimer then LuaTimer:cancel(self.liquidWalkTimer) end
+        self.liquidWalkTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockBelow = WorldManager:getBlock(math.floor(pos.x), math.floor(pos.y - 0.5), math.floor(pos.z))
+            if blockBelow and (blockBelow.name == "water" or blockBelow.name == "lava") then
+                player.Player.onGround = true
+                player.Player.velocity = {x = player.Player.velocity.x, y = 0, z = player.Player.velocity.z}
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Liquid Walk Enabled")
+    else
+        if self.liquidWalkTimer then LuaTimer:cancel(self.liquidWalkTimer) self.liquidWalkTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Liquid Walk Disabled")
+    end
+end
+
+function GMHelper:AntiFall(button)
+    self.antiFallEnabled = not self.antiFallEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.antiFallEnabled then
+        if self.antiFallTimer then LuaTimer:cancel(self.antiFallTimer) end
+        self.antiFallTimer = LuaTimer:scheduleTimer(function()
+            if player.Player.fallDistance > 3 then
+                player.Player.fallDistance = 0
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Anti Fall Enabled")
+    else
+        if self.antiFallTimer then LuaTimer:cancel(self.antiFallTimer) self.antiFallTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Anti Fall Disabled")
+    end
+end
+
+function GMHelper:BlockFly(button)
+    self.blockFlyEnabled = not self.blockFlyEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.blockFlyEnabled then
+        if self.blockFlyTimer then LuaTimer:cancel(self.blockFlyTimer) end
+        self.blockFlyTimer = LuaTimer:scheduleTimer(function()
+            local pos = player.Player.position
+            local blockBelow = {x = math.floor(pos.x), y = math.floor(pos.y - 1), z = math.floor(pos.z)}
+            WorldManager:setBlock(blockBelow.x, blockBelow.y, blockBelow.z, 1)
+            LuaTimer:scheduleTimer(function()
+                WorldManager:setBlock(blockBelow.x, blockBelow.y, blockBelow.z, 0)
+            end, 100, 1)
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Block Fly Enabled")
+    else
+        if self.blockFlyTimer then LuaTimer:cancel(self.blockFlyTimer) self.blockFlyTimer = nil end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Block Fly Disabled")
+    end
+end
+
+function GMHelper:FastPlace(button)
+    self.fastPlaceEnabled = not self.fastPlaceEnabled
+    local player = PlayerManager:getClientPlayer()
+    if not player or not player.Player then return end
+    if self.fastPlaceEnabled then
+        player.Player.placeSpeed = 0
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Fast Place Enabled")
+    else
+        player.Player.placeSpeed = 4
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Fast Place Disabled")
+    end
+end
+
+function GMHelper:AutoTool(button)
+    self.autoToolEnabled = not self.autoToolEnabled
+    if self.autoToolEnabled then
+        if self.autoToolTimer then LuaTimer:cancel(self.autoToolTimer) end
+        self.autoToolTimer = LuaTimer:scheduleTimer(function()
+            local targetBlock = CameraManager:getTargetBlock()
+            if targetBlock then
+                local player = PlayerManager:getClientPlayer()
+                if player and player.Player then
+                    local bestSlot = -1
+                    local bestSpeed = 0
+                    local inventory = player.Player.inventory
+                    for i = 0, 8 do
+                        local item = inventory:getItem(i)
+                        if item then
+                            local speed = item:getMiningSpeed(targetBlock)
+                            if speed > bestSpeed then
+                                bestSpeed = speed
+                                bestSlot = i
+                            end
+                        end
+                    end
+                    if bestSlot ~= -1 then
+                        player.Player.selectedSlot = bestSlot
+                    end
+                end
+            end
+        end, 200, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Auto Tool Enabled")
+    else
+        if self.autoToolTimer then 
+            LuaTimer:cancel(self.autoToolTimer) 
+            self.autoToolTimer = nil 
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Auto Tool Disabled")
+    end
+end
+
+function GMHelper:TargetStrafe(button)
+    self.targetStrafeEnabled = not self.targetStrafeEnabled
+    if self.targetStrafeEnabled then
+        if self.targetStrafeTimer then LuaTimer:cancel(self.targetStrafeTimer) end
+        self.targetStrafeTimer = LuaTimer:scheduleTimer(function()
+            local players = PlayerManager:getPlayers()
+            local clientPlayer = PlayerManager:getClientPlayer()
+            if clientPlayer and clientPlayer.Player then
+                local target = nil
+                local closestDistance = math.huge
+                for _, player in ipairs(players) do
+                    if player ~= clientPlayer and player.Player then
+                        local distance = Vector3.Distance(clientPlayer.Player.position, player.Player.position)
+                        if distance < closestDistance and distance <= 10 then
+                            closestDistance = distance
+                            target = player
+                        end
+                    end
+                end
+                if target then
+                    local angle = math.atan2(target.Player.position.z - clientPlayer.Player.position.z, target.Player.position.x - clientPlayer.Player.position.x)
+                    angle = angle + math.rad(90)
+                    clientPlayer.Player.velocity = {
+                        x = math.cos(angle) * 0.3,
+                        y = clientPlayer.Player.velocity.y,
+                        z = math.sin(angle) * 0.3
+                    }
+                end
+            end
+        end, 50, -1)
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00Target Strafe Enabled")
+    else
+        if self.targetStrafeTimer then 
+            LuaTimer:cancel(self.targetStrafeTimer) 
+            self.targetStrafeTimer = nil 
+        end
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000Target Strafe Disabled")
+    end
+end
+
+function GMHelper:ToggleCheat(cheatName, button)
+    local enabledStates = self.enabledStates or {}
+    self.enabledStates = enabledStates
+    
+    local currentState = enabledStates[cheatName] or false
+    enabledStates[cheatName] = not currentState
+    
+    if enabledStates[cheatName] then
+        button:SetBackgroundColor({0.1,0.7,0.2,0.9})
+        UIHelper.showToast("^00FF00"..cheatName.." Enabled")
+    else
+        button:SetBackgroundColor({0.2,0.2,0.3,0.8})
+        UIHelper.showToast("^FF0000"..cheatName.." Disabled")
+    end
+end
+
+local CONFIG = {
+    MAIN_WINDOW = { width = 1450, height = 780, pos_y = 25 },
+    COLORS = {
+        bg_main = {0.05, 0.05, 0.1, 0.95},
+        bg_header = {0.1, 0.1, 0.2, 1},
+        bg_tab_bar = {0.08, 0.08, 0.15, 1},
+        bg_tab_content = {0.03, 0.03, 0.08, 0.5},
+        bg_button = {0.2, 0.2, 0.3, 0.8},
+        bg_button_hover = {0.25, 0.25, 0.4, 0.9},
+        bg_button_active = {0.1, 0.7, 0.2, 0.9},
+        bg_tab_inactive = {0.1, 0.1, 0.18, 0.8},
+        bg_tab_active = {0.15, 0.15, 0.25, 1},
+        text_primary = {1, 1, 1, 1},
+        text_tab_inactive = {0.7, 0.7, 0.8, 1},
+        text_tab_active = {0.3, 0.8, 1, 1},
+        text_button = {0.9, 0.9, 1, 1},
+        text_credits_title = {0.9, 0.6, 1, 1},
+        text_credits_subtitle = {0.7, 0.9, 1, 1},
+        text_credits_content = {0.8, 0.8, 0.9, 1},
+        text_credits_link = {0.4, 0.8, 1, 1},
+        border_main = {0.8, 0.2, 1, 1},
+        border_header = {0.2, 0.8, 1, 1},
+        border_tab = {1, 0.5, 0.2, 1},
+        border_button = {0.5, 1, 0.3, 0.8},
+        border_button_hover = {0.8, 1, 0.2, 1},
+        border_button_active = {0.2, 1, 0.8, 1},
+        bg_credits_section = {0.08, 0.08, 0.15, 0.7}
+    },
+    BORDER = { thickness = 2 },
+    BUTTON = { width = 265, height = 45, spacing_x = 275, spacing_y = 60, margin = 25, cols = 5 },
+    TAB = { width = 180, height = 45, spacing = 190, margin = 15 },
+    ANIMATION = { scale_step = 0.05, timer_interval = 1 }
+}
+
+local CHEAT_CATEGORIES = {
+    {name = "Movement", cheats = {"Speed", "Fly", "Fast Jump", "No Fall Damage", "Phase", "Jesus", "Glide", "Wall Climb", "Spider", "JetPack", "Bhop", "Long Jump", "Anti-Death"}},
+    {name = "Combat", cheats = {"HitBox", "KillAura", "Aimbot", "Anti-Knockback", "Velocity", "Criticals", "Reach", "Auto Block", "Trigger Bot", "Auto Weapon", "Target Strafe", "Silent Aim"}},
+    {name = "Visual", cheats = {"ESP", "Tracers", "Nametags", "Freecam", "Fullbright", "X-Ray", "Zoom", "Chams", "Wallhack", "Search", "Item ESP", "Storage ESP"}},
+    {name = "World", cheats = {"Scaffold", "Tower", "Fast Break", "Nuker", "Auto Mine", "Chest Aura", "Auto Farm", "Liquid Walk", "Anti Fall", "Block Fly", "Fast Place", "Auto Tool"}},
+    {name = "Player", cheats = {"Inventory Walk", "No Slow", "Fast Eat", "Auto Respawn", "Regen", "Auto Armor", "Keep Inventory", "Fast Ladder", "Parkour", "Safe Walk", "Edge Jump", "Auto Jump"}},
+    {name = "Misc", cheats = {"Timer", "Fake Lag", "Spammer", "Auto Clicker", "Middle Click", "Blink", "Disabler", "Anti AFK", "Auto Reconnect", "Chat Bypass", "Skin Stealer", "Name Protect", "Movable Control"}},
+    {name = "Credits", cheats = {}}
+}
+
+local CHEAT_HANDLERS = {
+    ["Speed"] = function(btn) GMHelper:Speed(btn) end,
+    ["Fly"] = function(btn) GMHelper:Fly(btn) end,
+    ["Fast Jump"] = function(btn) GMHelper:FastJump(btn) end,
+    ["Phase"] = function(btn) GMHelper:Phase(btn) end,
+    ["Jesus"] = function(btn) GMHelper:Jesus(btn) end,
+    ["Glide"] = function(btn) GMHelper:Glide(btn) end,
+    ["Wall Climb"] = function(btn) GMHelper:WallClimb(btn) end,
+    ["Spider"] = function(btn) GMHelper:Spider(btn) end,
+    ["JetPack"] = function(btn) GMHelper:JetPack(btn) end,
+    ["Bhop"] = function(btn) GMHelper:Bhop(btn) end,
+    ["Long Jump"] = function(btn) GMHelper:LongJump(btn) end,
+    ["HitBox"] = function(btn) GMHelper:HitBox() btn:SetBackgroundColor(A and CONFIG.COLORS.bg_button_active or CONFIG.COLORS.bg_button) end,
+    ["KillAura"] = function(btn) GMHelper:KillAura(btn) end,
+    ["Aimbot"] = function(btn) GMHelper:Aimbot(btn) end,
+    ["Anti-Death"] = function(btn) GMHelper:AntiDeath(btn) end,
+    ["Anti-Knockback"] = function(btn) GMHelper:AntiKnockback(btn) end,
+    ["Velocity"] = function(btn) GMHelper:Velocity(btn) end,
+    ["Criticals"] = function(btn) GMHelper:Criticals(btn) end,
+    ["Reach"] = function(btn) GMHelper:Reach(btn) end,
+    ["Auto Block"] = function(btn) GMHelper:AutoBlock(btn) end,
+    ["Trigger Bot"] = function(btn) GMHelper:TriggerBot(btn) end,
+    ["Auto Weapon"] = function(btn) GMHelper:AutoWeapon(btn) end,
+    ["Target Strafe"] = function(btn) GMHelper:TargetStrafe(btn) end,
+    ["Silent Aim"] = function(btn) GMHelper:SilentAim(btn) end,
+    ["ESP"] = function(btn) GMHelper:ESP(btn) end,
+    ["Tracers"] = function(btn) GMHelper:Tracers(btn) end,
+    ["Nametags"] = function(btn) GMHelper:Nametags(btn) end,
+    ["Freecam"] = function(btn) GMHelper:Freecam(btn) end,
+    ["Movable Control"] = function(btn) GMHelper:MovingControls(btn) end,
+    ["Fullbright"] = function(btn) GMHelper:Fullbright(btn) end,
+    ["X-Ray"] = function(btn) GMHelper:XRay(btn) end,
+    ["Zoom"] = function(btn) GMHelper:Zoom(btn) end,
+    ["Chams"] = function(btn) GMHelper:Chams(btn) end,
+    ["Wallhack"] = function(btn) GMHelper:Wallhack(btn) end,
+    ["Search"] = function(btn) GMHelper:Search(btn) end,
+    ["Item ESP"] = function(btn) GMHelper:ItemESP(btn) end,
+    ["Storage ESP"] = function(btn) GMHelper:StorageESP(btn) end,
+    ["Scaffold"] = function(btn) GMHelper:Scaffold(btn) end,
+    ["Tower"] = function(btn) GMHelper:Tower(btn) end,
+    ["Fast Break"] = function(btn) GMHelper:FastBreak(btn) end,
+    ["Nuker"] = function(btn) GMHelper:Nuker(btn) end,
+    ["Auto Mine"] = function(btn) GMHelper:AutoMine(btn) end,
+    ["Chest Aura"] = function(btn) GMHelper:ChestAura(btn) end,
+    ["Auto Farm"] = function(btn) GMHelper:AutoFarm(btn) end,
+    ["Liquid Walk"] = function(btn) GMHelper:LiquidWalk(btn) end,
+    ["Anti Fall"] = function(btn) GMHelper:AntiFall(btn) end,
+    ["Block Fly"] = function(btn) GMHelper:BlockFly(btn) end,
+    ["Fast Place"] = function(btn) GMHelper:FastPlace(btn) end,
+    ["Auto Tool"] = function(btn) GMHelper:AutoTool(btn) end,
+    ["Inventory Walk"] = function(btn) GMHelper:InventoryWalk(btn) end,
+    ["No Slow"] = function(btn) GMHelper:NoSlow(btn) end,
+    ["Fast Eat"] = function(btn) GMHelper:FastEat(btn) end,
+    ["Auto Respawn"] = function(btn) GMHelper:AutoRespawn(btn) end,
+    ["Regen"] = function(btn) GMHelper:Regen(btn) end,
+    ["Auto Armor"] = function(btn) GMHelper:AutoArmor(btn) end,
+    ["Keep Inventory"] = function(btn) GMHelper:KeepInventory(btn) end,
+    ["Fast Ladder"] = function(btn) GMHelper:FastLadder(btn) end,
+    ["Parkour"] = function(btn) GMHelper:Parkour(btn) end,
+    ["Safe Walk"] = function(btn) GMHelper:SafeWalk(btn) end,
+    ["Edge Jump"] = function(btn) GMHelper:EdgeJump(btn) end,
+    ["Auto Jump"] = function(btn) GMHelper:AutoJump(btn) end,
+    ["Timer"] = function(btn) GMHelper:Timer(btn) end,
+    ["Fake Lag"] = function(btn) GMHelper:FakeLag(btn) end,
+    ["Spammer"] = function(btn) GMHelper:Spammer(btn) end,
+    ["Auto Clicker"] = function(btn) GMHelper:AutoClicker(btn) end,
+    ["Middle Click"] = function(btn) GMHelper:MiddleClick(btn) end,
+    ["Blink"] = function(btn) GMHelper:Blink(btn) end,
+    ["Disabler"] = function(btn) GMHelper:Disabler(btn) end,
+    ["Anti AFK"] = function(btn) GMHelper:AntiAFK(btn) end,
+    ["Auto Reconnect"] = function(btn) GMHelper:AutoReconnect(btn) end,
+    ["Chat Bypass"] = function(btn) GMHelper:ChatBypass(btn) end,
+    ["Skin Stealer"] = function(btn) GMHelper:SkinStealer(btn) end,
+    ["Name Protect"] = function(btn) GMHelper:NameProtect(btn) end,
+    ["No Fall Damage"] = function(btn) GMHelper:NoFallDmg(btn) end
+}
+
+local function RGBtoHSV(r, g, b)
+    local max, min = math.max(r, g, b), math.min(r, g, b)
+    local h, s, v
+    v = max
+    local d = max - min
+    s = max == 0 and 0 or d / max
+    if max == min then
+        h = 0
+    else
+        if max == r then
+            h = (g - b) / d + (g < b and 6 or 0)
+        elseif max == g then
+            h = (b - r) / d + 2
+        elseif max == b then
+            h = (r - g) / d + 4
+        end
+        h = h / 6
+    end
+    return h, s, v
+end
+
+local function HSVtoRGB(h, s, v)
+    local i = math.floor(h * 6)
+    local f = h * 6 - i
+    local p = v * (1 - s)
+    local q = v * (1 - f * s)
+    local t = v * (1 - (1 - f) * s)
+    i = i % 6
+    if i == 0 then return v, t, p
+    elseif i == 1 then return q, v, p
+    elseif i == 2 then return p, v, t
+    elseif i == 3 then return p, q, v
+    elseif i == 4 then return t, p, v
+    elseif i == 5 then return v, p, q end
+end
+
+local hueShift = 0
+
+local CheatMenu = {}
+CheatMenu.tabLayouts = {}
+CheatMenu.tabButtons = {}
+CheatMenu.activeTab = nil
+
+function CheatMenu:updateHueEffect(window, baseColor)
+    local r, g, b, a = baseColor[1], baseColor[2], baseColor[3], baseColor[4]
+    local h, s, v = RGBtoHSV(r, g, b)
+    h = (h + hueShift) % 1
+    local nr, ng, nb = HSVtoRGB(h, s, v)
+    window:SetBackgroundColor({nr, ng, nb, a})
+end
+
+function CheatMenu:startHueAnimation()
+    LuaTimer:scheduleTicker(function()
+        hueShift = (hueShift + 0.01) % 1
+        if self.header then
+            self:updateHueEffect(self.header, CONFIG.COLORS.bg_header)
+        end
+        return true
+    end, 30, -1)
+end
+
+function CheatMenu:createMainWindow()
+    self.mainWindow = GUIManager:createGUIWindow(GUIType.Layout, "Layout-Shadie")
+    local win = self.mainWindow
+    win:SetBackgroundColor(CONFIG.COLORS.bg_main)
+    win:SetHorizontalAlignment(HorizontalAlignment.Center)
+    win:SetVerticalAlignment(VerticalAlignment.Top)
+    win:SetHeight({0, CONFIG.MAIN_WINDOW.height})
+    win:SetWidth({0, CONFIG.MAIN_WINDOW.width})
+    win:SetYPosition({0, CONFIG.MAIN_WINDOW.pos_y})
+    win:SetVisible(false)
+    win:SetTouchable(true)
+    win:SetAlwaysOnTop(true)
+    win:SetLevel(1)
+    win:SetProperty("BorderColor", string.format("%.2f %.2f %.2f %.2f", CONFIG.COLORS.border_main[1], CONFIG.COLORS.border_main[2], CONFIG.COLORS.border_main[3], CONFIG.COLORS.border_main[4]))
+    win:SetProperty("BorderSize", tostring(CONFIG.BORDER.thickness))
+    return win
+end
+
+function CheatMenu:createOpenButton()
+    local btn = GUIManager:createGUIWindow(GUIType.Button, "button-Open")
+    btn:SetWidth({0, 55})
+    btn:SetHeight({0, 55})
+    btn:SetNormalImage("set:flagwar.json image:skill_02")
+    btn:SetPushedImage("set:flagwar.json image:skill_02")
+    btn:SetXPosition({1, -520})
+    btn:SetYPosition({0, 0})
+    btn:SetLevel(1)
+    btn:registerEvent(GUIEvent.ButtonClick, function() 
+        self.mainWindow:SetVisible(true) 
+        self.mainWindow:SetScale(VectorUtil.newVector3(1, 1, 1))
+    end)
+    GUISystem.Instance():GetRootWindow():AddChildWindow(btn)
+end
+
+function CheatMenu:createHeader()
+    local header = GUIManager:createGUIWindow(GUIType.StaticText, "Header-Cheats")
+    header:SetHorizontalAlignment(HorizontalAlignment.Center)
+    header:SetVerticalAlignment(VerticalAlignment.Top)
+    header:SetHeight({0, 60})
+    header:SetWidth({1, 0})
+    header:SetText("CHEAT MENU")
+    header:SetTextColor(CONFIG.COLORS.text_primary)
+    header:SetTextHorzAlign(HorizontalAlignment.Center)
+    header:SetTextVertAlign(VerticalAlignment.Center)
+    header:SetProperty("Font", "HT12")
+    header:SetBackgroundColor(CONFIG.COLORS.bg_header)
+    header:SetLevel(1)
+    header:SetProperty("BorderColor", string.format("%.2f %.2f %.2f %.2f", CONFIG.COLORS.border_header[1], CONFIG.COLORS.border_header[2], CONFIG.COLORS.border_header[3], CONFIG.COLORS.border_header[4]))
+    header:SetProperty("BorderSize", tostring(CONFIG.BORDER.thickness))
+    self.mainWindow:AddChildWindow(header)
+    self.header = header
+end
+
+function CheatMenu:createCloseButton()
+    local btn = GUIManager:createGUIWindow(GUIType.Button, "button-Close")
+    btn:SetWidth({0, 45})
+    btn:SetHeight({0, 45})
+    btn:SetNormalImage("set:tip_dialog.json image:btn_close")
+    btn:SetPushedImage("set:tip_dialog.json image:btn_close")
+    btn:SetXPosition({1, -50})
+    btn:SetYPosition({0, 8})
+    btn:SetAlwaysOnTop(true)
+    btn:SetTouchable(true)
+    btn:SetLevel(1)
+    btn:registerEvent(GUIEvent.ButtonClick, function() self:closeWithAnimation() end)
+    self.mainWindow:AddChildWindow(btn)
+end
+
+function CheatMenu:closeWithAnimation()
+    local scale = 1
+    local tickerId
+    tickerId = LuaTimer:scheduleTicker(function()
+        if scale > 0.5 then
+            scale = scale - CONFIG.ANIMATION.scale_step
+            self.mainWindow:SetScale(VectorUtil.newVector3(scale, scale, scale))
+            return true
+        else
+            self.mainWindow:SetVisible(false)
+            self.mainWindow:SetScale(VectorUtil.newVector3(1, 1, 1))
+            if tickerId then LuaTimer:cancel(tickerId) end
+            return false
+        end
+    end, CONFIG.ANIMATION.timer_interval, -1)
+end
+
+function CheatMenu:createTabBar()
+    self.tabBar = GUIManager:createGUIWindow(GUIType.Layout, "TabBar")
+    self.tabBar:SetWidth({1, 0})
+    self.tabBar:SetHeight({0, 55})
+    self.tabBar:SetYPosition({0, 60})
+    self.tabBar:SetBackgroundColor(CONFIG.COLORS.bg_tab_bar)
+    self.tabBar:SetLevel(1)
+    self.mainWindow:AddChildWindow(self.tabBar)
+end
+
+function CheatMenu:switchTab(name)
+    for tabName, layout in pairs(self.tabLayouts) do 
+        layout:SetVisible(tabName == name) 
+    end
+    for tabName, button in pairs(self.tabButtons) do
+        if tabName == name then
+            button:SetBackgroundColor(CONFIG.COLORS.bg_tab_active)
+            button:SetTextColor(CONFIG.COLORS.text_tab_active)
+        else
+            button:SetBackgroundColor(CONFIG.COLORS.bg_tab_inactive)
+            button:SetTextColor(CONFIG.COLORS.text_tab_inactive)
+        end
+    end
+    self.activeTab = name
+end
+
+function hslToRgb(h)
+    local c = 1
+    local x = 1 - math.abs((h / 60) % 2 - 1)
+    local r, g, b = 0, 0, 0
+    if h < 60 then r,g,b = c,x,0
+    elseif h < 120 then r,g,b = x,c,0
+    elseif h < 180 then r,g,b = 0,c,x
+    elseif h < 240 then r,g,b = 0,x,c
+    elseif h < 300 then r,g,b = x,0,c
+    else r,g,b = c,0,x end
+    return r, g, b
+end
+
+function CheatMenu:createCreditsContent(layout)
+    local mainTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-MainTitle")
+    mainTitle:SetText("INFO COMMUNITY")
+    mainTitle:SetWidth({1, 0})
+    mainTitle:SetHeight({0, 80})
+    mainTitle:SetYPosition({0, 10})
+    local r, g, b = hslToRgb(280)
+    mainTitle:SetTextColor({r, g, b, 1})
+    mainTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    mainTitle:SetTextVertAlign(VerticalAlignment.Center)
+    mainTitle:SetProperty("Font", "HT16")
+    mainTitle:SetBackgroundColor({0.05, 0.05, 0.15, 0.9})
+    mainTitle:SetLevel(2)
+    layout:AddChildWindow(mainTitle)
+
+    local creditsSection = GUIManager:createGUIWindow(GUIType.Layout, "Credits-MainSection")
+    creditsSection:SetWidth({0, 400})
+    creditsSection:SetHeight({0, 380})
+    creditsSection:SetXPosition({0, 50})
+    creditsSection:SetYPosition({0, 110})
+    creditsSection:SetBackgroundColor({0.08, 0.08, 0.18, 0.95})
+    creditsSection:SetLevel(1)
+    layout:AddChildWindow(creditsSection)
+
+    local creditsTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-SectionTitle")
+    creditsTitle:SetText("CREDITS")
+    creditsTitle:SetWidth({1, 0})
+    creditsTitle:SetHeight({0, 40})
+    creditsTitle:SetYPosition({0, 10})
+    local r, g, b = hslToRgb(200)
+    creditsTitle:SetTextColor({r, g, b, 1})
+    creditsTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    creditsTitle:SetTextVertAlign(VerticalAlignment.Center)
+    creditsTitle:SetProperty("Font", "HT12")
+    creditsSection:AddChildWindow(creditsTitle)
+
+    local developers = {
+        {name = "ZentexHacker", hue = 0},
+        {name = "KhdBg", hue = 60},
+        {name = "zNotnow_.", hue = 120},
+        {name = "CyberBg", hue = 180}
+    }
+    
+    for i, dev in ipairs(developers) do
+        local devName = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-Dev" .. i)
+        devName:SetText("• " .. dev.name)
+        devName:SetWidth({1, 0})
+        devName:SetHeight({0, 30})
+        devName:SetYPosition({0, 40 + (i * 35)})
+        local r, g, b = hslToRgb(dev.hue)
+        devName:SetTextColor({r, g, b, 1})
+        devName:SetTextHorzAlign(HorizontalAlignment.Center)
+        devName:SetTextVertAlign(VerticalAlignment.Center)
+        devName:SetProperty("Font", "HT10")
+        creditsSection:AddChildWindow(devName)
+    end
+
+    local versionInfo = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-Version")
+    versionInfo:SetText("Build 2025 | Premium Edition")
+    versionInfo:SetWidth({1, 0})
+    versionInfo:SetHeight({0, 25})
+    versionInfo:SetYPosition({0, 340})
+    versionInfo:SetTextColor({0.7, 0.7, 0.8, 1})
+    versionInfo:SetTextHorzAlign(HorizontalAlignment.Center)
+    versionInfo:SetTextVertAlign(VerticalAlignment.Center)
+    versionInfo:SetProperty("Font", "HT8")
+    creditsSection:AddChildWindow(versionInfo)
+
+    local youtubeSection = GUIManager:createGUIWindow(GUIType.Layout, "Credits-YouTubeSection")
+    youtubeSection:SetWidth({0, 400})
+    youtubeSection:SetHeight({0, 280})
+    youtubeSection:SetXPosition({0, 500})
+    youtubeSection:SetYPosition({0, 110})
+    youtubeSection:SetBackgroundColor({0.15, 0.05, 0.05, 0.95})
+    youtubeSection:SetLevel(1)
+    layout:AddChildWindow(youtubeSection)
+
+    local youtubeTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-YouTubeTitle")
+    youtubeTitle:SetText("YOUTUBE")
+    youtubeTitle:SetWidth({1, 0})
+    youtubeTitle:SetHeight({0, 40})
+    youtubeTitle:SetYPosition({0, 10})
+    local r, g, b = hslToRgb(0)
+    youtubeTitle:SetTextColor({r, g, b, 1})
+    youtubeTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    youtubeTitle:SetTextVertAlign(VerticalAlignment.Center)
+    youtubeTitle:SetProperty("Font", "HT12")
+    youtubeSection:AddChildWindow(youtubeTitle)
+
+    local youtubeChannels = {
+        {name = "@ZentexHacker-12", hue = 320},
+        {name = "@1-khdbg", hue = 40},
+        {name = "@_7grandtier", hue = 80},
+        {name = "@cubercoderBMGO", hue = 160}
+    }
+    
+    for i, channel in ipairs(youtubeChannels) do
+        local channelName = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-YouTube" .. i)
+        channelName:SetText("🎥 " .. channel.name)
+        channelName:SetWidth({1, 0})
+        channelName:SetHeight({0, 35})
+        channelName:SetYPosition({0, 40 + (i * 45)})
+        local r, g, b = hslToRgb(channel.hue)
+        channelName:SetTextColor({r, g, b, 1})
+        channelName:SetTextHorzAlign(HorizontalAlignment.Center)
+        channelName:SetTextVertAlign(VerticalAlignment.Center)
+        channelName:SetProperty("Font", "HT9")
+        youtubeSection:AddChildWindow(channelName)
+    end
+
+    local discordSection = GUIManager:createGUIWindow(GUIType.Layout, "Credits-DiscordSection")
+    discordSection:SetWidth({0, 400})
+    discordSection:SetHeight({0, 280})
+    discordSection:SetXPosition({0, 950})
+    discordSection:SetYPosition({0, 110})
+    discordSection:SetBackgroundColor({0.05, 0.1, 0.15, 0.95})
+    discordSection:SetLevel(1)
+    layout:AddChildWindow(discordSection)
+
+    local discordTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-DiscordTitle")
+    discordTitle:SetText("DISCORD")
+    discordTitle:SetWidth({1, 0})
+    discordTitle:SetHeight({0, 40})
+    discordTitle:SetYPosition({0, 10})
+    local r, g, b = hslToRgb(240)
+    discordTitle:SetTextColor({r, g, b, 1})
+    discordTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    discordTitle:SetTextVertAlign(VerticalAlignment.Center)
+    discordTitle:SetProperty("Font", "HT12")
+    discordSection:AddChildWindow(discordTitle)
+
+    local discordUsers = {
+        {name = "@zentexhacker", hue = 280},
+        {name = "@vapeblockmango", hue = 100},
+        {name = "@lrttxx", hue = 60},
+        {name = "@cyberbg14", hue = 220}
+    }
+    
+    for i, user in ipairs(discordUsers) do
+        local userName = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-Discord" .. i)
+        userName:SetText("💬 " .. user.name)
+        userName:SetWidth({1, 0})
+        userName:SetHeight({0, 35})
+        userName:SetYPosition({0, 40 + (i * 45)})
+        local r, g, b = hslToRgb(user.hue)
+        userName:SetTextColor({r, g, b, 1})
+        userName:SetTextHorzAlign(HorizontalAlignment.Center)
+        userName:SetTextVertAlign(VerticalAlignment.Center)
+        userName:SetProperty("Font", "HT9")
+        discordSection:AddChildWindow(userName)
+    end
+
+    local infoSection = GUIManager:createGUIWindow(GUIType.Layout, "Credits-InfoSection")
+    infoSection:SetWidth({0, 600})
+    infoSection:SetHeight({0, 120})
+    infoSection:SetXPosition({0, 50})
+    infoSection:SetYPosition({0, 510})
+    infoSection:SetBackgroundColor({0.1, 0.08, 0.05, 0.95})
+    infoSection:SetLevel(1)
+    layout:AddChildWindow(infoSection)
+
+    local infoTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-InfoTitle")
+    infoTitle:SetText("✨ PREMIUM FEATURES")
+    infoTitle:SetWidth({1, 0})
+    infoTitle:SetHeight({0, 30})
+    infoTitle:SetYPosition({0, 10})
+    local r, g, b = hslToRgb(45)
+    infoTitle:SetTextColor({r, g, b, 1})
+    infoTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    infoTitle:SetTextVertAlign(VerticalAlignment.Center)
+    infoTitle:SetProperty("Font", "HT10")
+    infoSection:AddChildWindow(infoTitle)
+
+    local features = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-Features")
+    features:SetText("Advanced ESP • Aimbot Pro • Anti-Detection • 24/7 Updates")
+    features:SetWidth({1, 0})
+    features:SetHeight({0, 60})
+    features:SetYPosition({0, 45})
+    features:SetTextColor({0.9, 0.8, 0.6, 1})
+    features:SetTextHorzAlign(HorizontalAlignment.Center)
+    features:SetTextVertAlign(VerticalAlignment.Center)
+    features:SetProperty("Font", "HT8")
+    infoSection:AddChildWindow(features)
+
+    local warningSection = GUIManager:createGUIWindow(GUIType.Layout, "Credits-WarningSection")
+    warningSection:SetWidth({0, 700})
+    warningSection:SetHeight({0, 120})
+    warningSection:SetXPosition({0, 650})
+    warningSection:SetYPosition({0, 510})
+    warningSection:SetBackgroundColor({0.15, 0.05, 0.05, 0.95})
+    warningSection:SetLevel(1)
+    layout:AddChildWindow(warningSection)
+
+    local warningTitle = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-WarningTitle")
+    warningTitle:SetText("⚠️ RESPONSIBILITY NOTICE")
+    warningTitle:SetWidth({1, 0})
+    warningTitle:SetHeight({0, 35})
+    warningTitle:SetYPosition({0, 10})
+    warningTitle:SetTextColor({1, 0.3, 0.3, 1})
+    warningTitle:SetTextHorzAlign(HorizontalAlignment.Center)
+    warningTitle:SetTextVertAlign(VerticalAlignment.Center)
+    warningTitle:SetProperty("Font", "HT10")
+    warningSection:AddChildWindow(warningTitle)
+
+    local warningText = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-WarningText")
+    warningText:SetText("Use ethically • Respect server rules • Educational purposes only")
+    warningText:SetWidth({1, 0})
+    warningText:SetHeight({0, 60})
+    warningText:SetYPosition({0, 50})
+    warningText:SetTextColor({0.9, 0.7, 0.7, 1})
+    warningText:SetTextHorzAlign(HorizontalAlignment.Center)
+    warningText:SetTextVertAlign(VerticalAlignment.Center)
+    warningText:SetProperty("Font", "HT8")
+    warningSection:AddChildWindow(warningText)
+
+    local footer = GUIManager:createGUIWindow(GUIType.StaticText, "Credits-Footer")
+    footer:SetText("© 2025 Zentex Development Team - Premium Gaming Tools")
+    footer:SetWidth({1, 0})
+    footer:SetHeight({0, 40})
+    footer:SetYPosition({0, 650})
+    local r, g, b = hslToRgb(300)
+    footer:SetTextColor({r * 0.7, g * 0.7, b * 0.7, 0.8})
+    footer:SetTextHorzAlign(HorizontalAlignment.Center)
+    footer:SetTextVertAlign(VerticalAlignment.Center)
+    footer:SetProperty("Font", "HT8")
+    layout:AddChildWindow(footer)
+end
+
+function CheatMenu:createCheatButton(cheatName, layout, index)
+    local button = GUIManager:createGUIWindow(GUIType.StaticText, "Button-" .. cheatName)
+    button:SetText(cheatName)
+    button:SetWidth({0, CONFIG.BUTTON.width})
+    button:SetHeight({0, CONFIG.BUTTON.height})
+    button:SetBackgroundColor(CONFIG.COLORS.bg_button)
+    local row = math.floor((index - 1) / CONFIG.BUTTON.cols)
+    local col = (index - 1) % CONFIG.BUTTON.cols
+    button:SetXPosition({0, CONFIG.BUTTON.margin + (col * CONFIG.BUTTON.spacing_x)})
+    button:SetYPosition({0, CONFIG.BUTTON.margin + (row * CONFIG.BUTTON.spacing_y)})
+    button:SetTextHorzAlign(HorizontalAlignment.Center)
+    button:SetTextVertAlign(VerticalAlignment.Center)
+    button:SetTextColor(CONFIG.COLORS.text_button)
+    button:SetTouchable(true)
+    button:SetProperty("Font", "HT10")
+    button:SetLevel(1)
+    button:registerEvent(GUIEvent.MouseEnter, function()
+        if button:GetBackgroundColor()[2] < 0.5 then
+            button:SetBackgroundColor(CONFIG.COLORS.bg_button_hover)
+        end
+    end)
+    button:registerEvent(GUIEvent.MouseLeave, function()
+        if button:GetBackgroundColor()[2] < 0.5 then
+            button:SetBackgroundColor(CONFIG.COLORS.bg_button)
+        end
+    end)
+    button:registerEvent(GUIEvent.Click, function()
+        local handler = CHEAT_HANDLERS[cheatName]
+        if handler then
+            handler(button)
+        else
+            GMHelper:ToggleCheat(cheatName, button)
+        end
+    end)
+    layout:AddChildWindow(button)
+end
+
+function CheatMenu:createTabs()
+    for i, category in ipairs(CHEAT_CATEGORIES) do
+        local tabButton = GUIManager:createGUIWindow(GUIType.StaticText, "TabBtn-" .. category.name)
+        tabButton:SetText(category.name)
+        tabButton:SetWidth({0, CONFIG.TAB.width})
+        tabButton:SetHeight({0, CONFIG.TAB.height})
+        tabButton:SetXPosition({0, CONFIG.TAB.margin + (i - 1) * CONFIG.TAB.spacing})
+        tabButton:SetYPosition({0, 5})
+        tabButton:SetBackgroundColor(CONFIG.COLORS.bg_tab_inactive)
+        tabButton:SetTextColor(CONFIG.COLORS.text_tab_inactive)
+        tabButton:SetTextHorzAlign(HorizontalAlignment.Center)
+        tabButton:SetTextVertAlign(VerticalAlignment.Center)
+        tabButton:SetTouchable(true)
+        tabButton:SetProperty("Font", "HT9")
+        tabButton:SetLevel(1)
+        tabButton:registerEvent(GUIEvent.Click, function() self:switchTab(category.name) end)
+        self.tabBar:AddChildWindow(tabButton)
+        self.tabButtons[category.name] = tabButton
+        local layout = GUIManager:createGUIWindow(GUIType.Layout, "Tab-" .. category.name)
+        layout:SetWidth({1, 0})
+        layout:SetHeight({1, -115})
+        layout:SetYPosition({0, 115})
+        layout:SetVisible(false)
+        layout:SetBackgroundColor(CONFIG.COLORS.bg_tab_content)
+        layout:SetLevel(1)
+        self.mainWindow:AddChildWindow(layout)
+        self.tabLayouts[category.name] = layout
+
+        if category.name == "Credits" then
+            self:createCreditsContent(layout)
+        else
+            for index, cheatName in ipairs(category.cheats) do
+                self:createCheatButton(cheatName, layout, index)
+            end
+        end
+    end
+end
+
+-- Example Usage:
+--[[
+-- Lmao
+--]]
+
+function CheatMenu:initialize()
+    self:createMainWindow()
+    self:createOpenButton()
+    self:createHeader()
+    self:createCloseButton()
+    self:createTabBar()
+    self:createTabs()
+    self:switchTab("Movement")
+    self:startHueAnimation()
+    GUISystem.Instance():GetRootWindow():AddChildWindow(self.mainWindow)
+end
+
+CheatMenu:initialize()
+
+
+local currentHue = 180 
+local direction = 1
+local speed = 0.25
+
+local function hslToRgb(h, s, l)
+    local c = (1 - math.abs(2 * l - 1)) * s
+    local x = c * (1 - math.abs(math.fmod(h / 60, 2) - 1))
+    local m = l - c / 2
+    local r, g, b
+    if h < 60 then
+        r, g, b = c, x, 0
+    elseif h < 120 then
+        r, g, b = x, c, 0
+    elseif h < 180 then
+        r, g, b = 0, c, x
+    elseif h < 240 then
+        r, g, b = 0, x, c
+    elseif h < 300 then
+        r, g, b = x, 0, c
+    else
+        r, g, b = c, 0, x
+    end
+    return (r + m), (g + m), (b + m)
+end
+
+Credits = GUIManager:createGUIWindow(GUIType.StaticText, "VapeV4Credits")
+Credits:SetHorizontalAlignment(HorizontalAlignment.Center)
+Credits:SetVerticalAlignment(VerticalAlignment.Center)
+Credits:SetXPosition({ 0, 0 })
+Credits:SetYPosition({ 0, 0 })
+Credits:SetWidth({0, 800})
+Credits:SetHeight({0, 120})
+Credits:SetTextHorzAlign(HorizontalAlignment.Center)
+Credits:SetTextVertAlign(VerticalAlignment.Center)
+GUISystem.Instance():GetRootWindow():AddChildWindow(Credits)
+Credits:SetVisible(true)
+Credits:SetBordered(true)
+Credits:SetTouchable(false)
+Credits:SetLevel(5)
+Credits:SetTextScale(0.9)
+
+local function createCreditLine(text, offsetY)
+    local line = GUIManager:createGUIWindow(GUIType.StaticText, "CreditLine-"..offsetY)
+    line:SetHorizontalAlignment(HorizontalAlignment.Left)
+    line:SetVerticalAlignment(VerticalAlignment.Bottom)
+    line:SetXPosition({0, 10})
+    line:SetYPosition({0, -offsetY})
+    line:SetWidth({0, 500})
+    line:SetHeight({0, 30})
+    line:SetTextHorzAlign(HorizontalAlignment.Left)
+    line:SetTextVertAlign(VerticalAlignment.Center)
+    line:SetText(text)
+    line:SetVisible(true)
+    line:SetBordered(true)
+    line:SetTouchable(false)
+    line:SetLevel(5)
+    line:SetTextScale(0.9)
+    GUISystem.Instance():GetRootWindow():AddChildWindow(line)
+    return line
+end
+
+local CreditLines = {
+    createCreditLine("Credits : ZentexHacker & KhdBg", 20),
+    createCreditLine("Discord : zentexhacker", 60),
+    createCreditLine("Special Thanks : khd, Lua Community", 100),
+    createCreditLine("Version : [ Beta 1.0 ]", 140),
+}
+
+function cred()
+    local function CreditsColor()
+        local minHue = 0
+        local maxHue = 60
+        currentHue = currentHue + (direction * speed)
+        if currentHue >= maxHue then
+            direction = -1
+        elseif currentHue <= minHue then
+            direction = 1
+        end
+        local r, g, b = hslToRgb(currentHue, 1, 0.5)
+        for _, line in ipairs(CreditLines) do
+            line:SetTextColor({ r, g, b, 1 })
+        end
+    end
+    LuaTimer:scheduleTimer(CreditsColor, 15, -1)
+end
+cred()
+
+function GMHelper:FuckingStealer() 
+    LuaTimer:scheduleTimer(function() 
+        if MsgSender and MsgSender.sendMsg then 
+            MsgSender.sendMsg("You Has Banned From SrixGUI, Loll") 
+        end 
+    end, 100, -1) 
+end
+
+function GMHelper:addUserToBlacklist()
+    local path = "/storage/emulated/0/Android/data/com.sandboxol.blockymods.official/files/Download/SandboxOL/BlockMan/config/blockmanClientId.txt"
+    local file, err = io.open(path, "a")
+
+    if file then
+        local player = PlayerManager:getClientPlayer()
+        if player and player.Player then
+            local userID = player.userId
+            file:write(userID .. "\n")
+        end
+        file:close()
+    else
+        print("Failed to write user ID: " .. tostring(err))
+    end
+end
+
+function GMHelper:guiDestroy()
+    Credits:SetText("Ur Got Banned Permanently Lmaoooo")
+    Open:SetVisible(false)
+    
+    GMHelper:FuckingStealer()
+end
+
+function GMHelper:getBlacklistUser()
+   local player = PlayerManager:getClientPlayer()
+   if not player or not player.userId then
+       return
+   end
+   
+   local UserID = player.userId
+   local path = "/storage/emulated/0/Android/data/com.sandboxol.blockymods.official/files/Download/SandboxOL/BlockMan/config/blockmanClientId.txt"
+   
+   local file, err = io.open(path, "r")
+   
+   if file then
+       for line in file:lines() do
+           local trimmedLine = line:gsub("^%s*(.-)%s*$", "%1")
+           
+           if trimmedLine == tostring(UserID) then
+               file:close()
+               GMHelper:guiDestroy()
+               return
+           end
+       end
+       
+       file:close()
+   else
+       print("Gagal membuka file blacklist: " .. tostring(err))
+   end
+end
+
+expectedCreditText = "VapeV4Credits"
+
+CheckerTimer = LuaTimer:scheduleTimer(function()
+    local currentCreditsText = Credits:GetText() 
+    local isCreditsVisible = Credits:IsVisible()
+    
+    if currentCreditsText ~= expectedCreditText then
+        GMHelper:addUserToBlacklist()
+        GMHelper:getBlacklistUser()
+        LuaTimer:cancel(CheckerTimer)
+    elseif not isCreditsVisible then
+        GMHelper:addUserToBlacklist()
+        GMHelper:getBlacklistUser()
+        LuaTimer:cancel(CheckerTimer)
+    end
+    GMHelper:getBlacklistUser()
+end, 150, -1)
+
+
+
+
+
+--[[
+
+‌🇨‌🇭‌🇦‌🇹 ‌🇨‌🇴‌🇱‌🇴‌🇷 ‌🇬‌🇦‌🇾
+
+‌🇫‌🇺‌🇨‌🇰‌🇪‌🇩 ‌🇸‌🇦‌🇭‌🇰‌🇴‌🇴 ‌🇦‌🇳‌🇩 ‌🇻‌🇴‌🇷‌🇹‌🇪‌🇽
+
+]]--
+
+function Game:init()
+
+
+
+
+-- Chat Color ae
+
+
+function ChatColor()
+    local selectedColorHex = "FF3333"
+    local isAnimating = false
+    local glowIntensity, glowDir = 0.3, 1
+
+    local function clamp(v) return math.max(0, math.min(255, math.floor(v * 255))) end
+    local function rgbToHex(r, g, b) return string.format("%02X%02X%02X", clamp(r*255), clamp(g*255), clamp(b*255)) end
+    local function hexToRgb(hex)
+        if #hex == 6 then
+            return tonumber(hex:sub(1, 2), 16) / 255,
+                   tonumber(hex:sub(3, 4), 16) / 255,
+                   tonumber(hex:sub(5, 6), 16) / 255
+        end
+        return 1,1,1
+    end
+    local function hsvToRgb(h, s, v)
+        local i = math.floor(h * 6)
+        local f = h * 6 - i
+        local p = v * (1 - s)
+        local q = v * (1 - f * s)
+        local t = v * (1 - (1 - f) * s)
+        local mod = i % 6
+        if mod == 0 then return v,t,p
+        elseif mod == 1 then return q,v,p
+        elseif mod == 2 then return p,v,t
+        elseif mod == 3 then return p,q,v
+        elseif mod == 4 then return t,p,v
+        else return v,p,q end
+    end
+    local function applyColorToChat(hex)
+        if not hex or #hex ~= 6 then return false end
+        local ChatInputBox = GUIManager:getWindowByName("Chat-Input-Box")
+        if not ChatInputBox then return false end
+        local originalMessage = ChatInputBox:GetText() or ""
+        originalMessage = originalMessage:gsub("^%^[%x][%x][%x][%x][%x][%x]", "")
+        ChatInputBox:SetText("^" .. hex:upper() .. originalMessage)
+        return true
+    end
+
+    local PickerWin = GUIManager:createGUIWindow(GUIType.DefaultWindow, "AdvancedColorPicker")
+    PickerWin:SetHorizontalAlignment(HorizontalAlignment.Center)
+    PickerWin:SetVerticalAlignment(HorizontalAlignment.Center)
+    PickerWin:SetHeight({0, 620})
+    PickerWin:SetWidth({0, 520})
+    PickerWin:SetBackgroundColor({0.08,0.08,0.15,0.97})
+    PickerWin:SetVisible(false)
+    GUISystem.Instance():GetRootWindow():AddChildWindow(PickerWin)
+
+   local TitleBar = GUIManager:createGUIWindow(GUIType.Layout, "ColorPickerTitle")
+   TitleBar:SetHorizontalAlignment(HorizontalAlignment.Center)
+   TitleBar:SetVerticalAlignment(VerticalAlignment.Top)
+   TitleBar:SetHeight({0, 50})
+   TitleBar:SetWidth({0, 500})
+   TitleBar:SetBackgroundColor({0.15, 0.07, 0.25, 0.96})
+   TitleBar:SetLevel(1)
+   PickerWin:AddChildWindow(TitleBar)
+
+   local TitleText = GUIManager:createGUIWindow(GUIType.Text, "ColorPickerText")
+    TitleText:SetHorizontalAlignment(HorizontalAlignment.Center)
+    TitleText:SetVerticalAlignment(VerticalAlignment.Center)
+    TitleText:SetWidth({0, 420})
+    TitleText:SetHeight({0, 50})
+    TitleText:SetText("Chat Color Premium")
+    TitleText:SetVisible(true)
+    TitleText:SetLevel(0)
+    TitleBar:AddChildWindow(TitleText)
+
+    local CloseBtn = GUIManager:createGUIWindow(GUIType.Button, "ColorPickerClose")
+    CloseBtn:SetHorizontalAlignment(HorizontalAlignment.Right)
+    CloseBtn:SetVerticalAlignment(VerticalAlignment.Center)
+    CloseBtn:SetHeight({0, 40})
+    CloseBtn:SetWidth({0, 40})
+    CloseBtn:SetXPosition({0, -5})
+    CloseBtn:SetNormalImage("set:tip_dialog.json image:btn_close")
+    CloseBtn:SetPushedImage("set:tip_dialog.json image:btn_close")
+    TitleBar:AddChildWindow(CloseBtn)
+
+    CloseBtn:registerEvent(GUIEvent.ButtonClick, function()
+        if not isAnimating then
+            isAnimating = true
+            local scale, alpha = 1, 1
+            LuaTimer:scheduleTicker(function()
+                scale = scale - 0.05
+                alpha = alpha - 0.06
+                if scale <= 0 then
+                    PickerWin:SetVisible(false)
+                    PickerWin:SetScale(VectorUtil.newVector3(1,1,1))
+                    PickerWin:SetAlpha(1)
+                    isAnimating = false
+                else
+                    PickerWin:SetScale(VectorUtil.newVector3(scale, scale, scale))
+                    PickerWin:SetAlpha(alpha)
+                end
+            end, 1, 20)
+        end
+    end)
+
+    local PreviewSection = GUIManager:createGUIWindow(GUIType.Layout, "PreviewSection")
+    PreviewSection:SetHorizontalAlignment(HorizontalAlignment.Center)
+    PreviewSection:SetVerticalAlignment(VerticalAlignment.Top)
+    PreviewSection:SetHeight({0, 60})
+    PreviewSection:SetWidth({0, 200})
+    PreviewSection:SetYPosition({0, 60})
+    PreviewSection:SetBackgroundColor({1,0.25,0.35,1})
+    PickerWin:AddChildWindow(PreviewSection)
+
+    local HueContainer = GUIManager:createGUIWindow(GUIType.Layout, "HueCircle")
+    HueContainer:SetHorizontalAlignment(HorizontalAlignment.Center)
+    HueContainer:SetVerticalAlignment(VerticalAlignment.Top)
+    HueContainer:SetHeight({0, 260})
+    HueContainer:SetWidth({0, 260})
+    HueContainer:SetYPosition({0, 130})
+    PickerWin:AddChildWindow(HueContainer)
+
+    local radius, steps = 110, 36
+    for i=1,steps do
+        local angle = (i/steps) * 2 * math.pi
+        local r,g,b = hsvToRgb(i/steps, 1, 1)
+        local btn = GUIManager:createGUIWindow(GUIType.Button, "Hue_"..i)
+        btn:SetHeight({0, 20})
+        btn:SetWidth({0, 20})
+        btn:SetBackgroundColor({r,g,b,1})
+        btn:SetXPosition({0, radius * math.cos(angle) + 120})
+        btn:SetYPosition({0, radius * math.sin(angle) + 120})
+        HueContainer:AddChildWindow(btn)
+        btn:registerEvent(GUIEvent.ButtonClick, function()
+            PreviewSection:SetBackgroundColor({r,g,b,1})
+            selectedColorHex = rgbToHex(r,g,b)
+            applyColorToChat(selectedColorHex)
+        end)
+    end
+
+    local EmojiBtn = GUIManager:createGUIWindow(GUIType.Button, "EmojiCenterBtn")
+    EmojiBtn:SetHorizontalAlignment(HorizontalAlignment.Center)
+    EmojiBtn:SetVerticalAlignment(VerticalAlignment.Center)
+    EmojiBtn:SetHeight({0, 80})
+    EmojiBtn:SetWidth({0, 80})
+    EmojiBtn:SetNormalImage("set:emoji.json image:img_0_phiz_good")
+    EmojiBtn:SetPushedImage("set:emoji.json image:img_0_phiz_good")
+    EmojiBtn:SetXPosition({0, 0})
+    EmojiBtn:SetYPosition({0, 0})
+    HueContainer:AddChildWindow(EmojiBtn)
+
+    EmojiBtn:registerEvent(GUIEvent.ButtonClick, function()
+        local ChatInputBox = GUIManager:getWindowByName("Chat-Input-Box")
+        if ChatInputBox then
+            local msg = ChatInputBox:GetText() or ""
+            ChatInputBox:SetText(msg .. "Cyber ♡")
+        end
+    end)
+
+    local SwatchGrid = GUIManager:createGUIWindow(GUIType.GridView, "SwatchGrid")
+    SwatchGrid:SetHorizontalAlignment(HorizontalAlignment.Center)
+    SwatchGrid:SetVerticalAlignment(VerticalAlignment.Bottom)
+    SwatchGrid:SetHeight({0, 200})
+    SwatchGrid:SetWidth({0, 480})
+    SwatchGrid:SetYPosition({0, -20})
+    SwatchGrid:InitConfig(44, 44, 6)
+    PickerWin:AddChildWindow(SwatchGrid)
+
+    local palettes = {
+        "FF0000","00FF00","0000FF","FFFF00","FF00FF","00FFFF","FFFFFF","000000","808080",
+        "DC143C","FF8C00","FFD700","FF69B4","F08080","FFDAB9","8B0000","800000",
+        "00BFFF","9932CC","32CD32","ADD8E6","90EE90","E6E6FA","00008B","006400","9400D3",
+        "FFB6C1","FFFFE0","F5FFFA","D8BFD8","A9A9A9","2F4F4F",
+        "39FF14","FF073A","FF6EC7","FFAE42","0FF0FC","FF4500","7DF9FF","9D00FF","FFD1DC"
+    }
+    for _,hex in ipairs(palettes) do
+        local r,g,b = hexToRgb(hex)
+        local Swatch = GUIManager:createGUIWindow(GUIType.Button, "Swatch_"..hex)
+        Swatch:SetHeight({0, 40})
+        Swatch:SetWidth({0, 40})
+        Swatch:SetBackgroundColor({r,g,b,1})
+        SwatchGrid:AddItem(Swatch)
+        Swatch:registerEvent(GUIEvent.ButtonClick, function()
+            PreviewSection:SetBackgroundColor({r,g,b,1})
+            selectedColorHex = hex
+            applyColorToChat(selectedColorHex)
+        end)
+    end
+
+    for i=0,15 do
+        local gray = i/15
+        local hex = rgbToHex(gray, gray, gray)
+        local Swatch = GUIManager:createGUIWindow(GUIType.Button, "Gray_"..i)
+        Swatch:SetHeight({0, 40})
+        Swatch:SetWidth({0, 40})
+        Swatch:SetBackgroundColor({gray,gray,gray,1})
+        SwatchGrid:AddItem(Swatch)
+        Swatch:registerEvent(GUIEvent.ButtonClick, function()
+            PreviewSection:SetBackgroundColor({gray,gray,gray,1})
+            selectedColorHex = hex
+            applyColorToChat(selectedColorHex)
+        end)
+    end
+
+    for i=0,11 do
+        local r,g,b = hsvToRgb(i/12, 1, 1)
+        local hex = rgbToHex(r,g,b)
+        local Swatch = GUIManager:createGUIWindow(GUIType.Button, "Rainbow_"..i)
+        Swatch:SetHeight({0, 40})
+        Swatch:SetWidth({0, 40})
+        Swatch:SetBackgroundColor({r,g,b,1})
+        SwatchGrid:AddItem(Swatch)
+        Swatch:registerEvent(GUIEvent.ButtonClick, function()
+            PreviewSection:SetBackgroundColor({r,g,b,1})
+            selectedColorHex = hex
+            applyColorToChat(selectedColorHex)
+        end)
+    end
+
+    local ChatInputBox = GUIManager:getWindowByName("Chat-Input-Box")
+    if ChatInputBox then
+        local OpenBtn = GUIManager:createGUIWindow(GUIType.Button, "ColorOpenBtn")
+        OpenBtn:SetHorizontalAlignment(HorizontalAlignment.Right)
+        OpenBtn:SetVerticalAlignment(VerticalAlignment.Center)
+        OpenBtn:SetHeight({0, 36})
+        OpenBtn:SetWidth({0, 36})
+        OpenBtn:SetBackgroundColor({1,0.4,0.5,1})
+        OpenBtn:SetXPosition({0, -45})
+        ChatInputBox:AddChildWindow(OpenBtn)
+
+        local Glow = GUIManager:createGUIWindow(GUIType.Layout, "GlowBorder")
+        Glow:SetHorizontalAlignment(HorizontalAlignment.Center)
+        Glow:SetVerticalAlignment(VerticalAlignment.Center)
+        Glow:SetHeight({0, 46})
+        Glow:SetWidth({0, 46})
+        Glow:SetBackgroundColor({1,0.3,0.4,glowIntensity})
+        Glow:SetTouchable(false)
+        OpenBtn:AddChildWindow(Glow)
+
+        LuaTimer:scheduleTicker(function()
+            glowIntensity = glowIntensity + (glowDir * 0.02)
+            if glowIntensity >= 0.6 then glowDir = -1 end
+            if glowIntensity <= 0.2 then glowDir = 1 end
+            Glow:SetBackgroundColor({1,0.3,0.4,glowIntensity})
+        end, 1, 0)
+
+        OpenBtn:registerEvent(GUIEvent.ButtonClick, function()
+            if not isAnimating then
+                isAnimating = true
+                PickerWin:SetVisible(true)
+                local scale, alpha = 0.2, 0
+                LuaTimer:scheduleTicker(function()
+                    scale = math.min(1, scale + 0.05)
+                    alpha = math.min(1, alpha + 0.07)
+                    PickerWin:SetScale(VectorUtil.newVector3(scale, scale, scale))
+                    PickerWin:SetAlpha(alpha)
+                    if scale >= 1 then
+                        isAnimating = false
+                    end
+                end, 1, 20)
+            end
+        end)
+    end
+
+    return {
+        getCurrentColor = function() return selectedColorHex end,
+        applyColor = function(hex) return applyColorToChat(hex) end,
+        showPicker = function() PickerWin:SetVisible(true) end,
+        hidePicker = function() PickerWin:SetVisible(false) end
+    }
+end
+
+self.CGame = CGame.Instance()
+self.GameType = self.CGame:getGameType()
+self.EnableIndie = self.CGame:isEnableIndie(true)
+self.Blockman = Blockman.Instance()
+self.World = self.Blockman:getWorld()
+self.LowerDevice = self.CGame:isLowerDevice()
+-----------------
+ChatColor()
+-----------------
+
+end
+
+
+
+
+
+
+
+----------------------------------------------------------------- Lmao
+
+
+
+
+
+
+
+
+
+
+
+
+--[[ function local speedGay(gay)
+A = not A
+
+gay:SpeedLevel(155555555555)-- gay
+
+
+end
+
+lmao wtf is that
+
+]]--
