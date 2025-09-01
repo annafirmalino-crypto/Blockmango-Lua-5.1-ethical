@@ -1,0 +1,14 @@
+with the handler ; (mostly used)
+function GMHelper:SaySomethingCool()
+    UIHelper.showToast("im cool")
+end
+
+in a local function ;
+local function SaySomethingCool()
+    UIHelper.showToast("im cool")
+end
+
+normal ;
+function SaySomethingCool()
+    UIHelper.showToast("im cool")
+end
