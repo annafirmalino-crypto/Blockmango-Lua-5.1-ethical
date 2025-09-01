@@ -1,0 +1,321 @@
+local version = "1.0"
+local name = "KhaX" .. version
+local credits = "KhdBg & AstrixTeam"
+local UIChild = GUISystem.Instance():GetRootWindow()
+GMHelper = GMHelper or {}
+
+local OpenButton = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local Main = GUIManager:createGUIWindow(GUIType.Layout, tostring(math.random(1, 999e9)))
+local MainLine = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local Input = GUIManager:createGUIWindow(GUIType.MultilineEdit, tostring(math.random(1, 999e9)))
+local InputList = GUIManager:createGUIWindow(GUIType.List, tostring(math.random(1, 999e9)))
+local ExecuteBtn = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local ClearBtn = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local ClearCorner = GUIManager:createGUIWindow(GUIType.Layout, tostring(math.random(1, 999e9)))
+local CopyBtn = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local CopyCorner = GUIManager:createGUIWindow(GUIType.Layout, tostring(math.random(1, 999e9)))
+local ExecuteCorner = GUIManager:createGUIWindow(GUIType.Layout, tostring(math.random(1, 999e9)))
+local Console = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+local ConsoleLine = GUIManager:createGUIWindow(GUIType.StaticText, tostring(math.random(1, 999e9)))
+
+UIChild:AddChildWindow(OpenButton)
+UIChild:AddChildWindow(Main)
+UIChild:AddChildWindow(Console)
+Console:AddChildWindow(ConsoleLine)
+Main:AddChildWindow(InputList)
+Main:AddChildWindow(MainLine)
+Main:AddChildWindow(ExecuteCorner)
+ExecuteCorner:AddChildWindow(ExecuteBtn)
+Main:AddChildWindow(ClearCorner)
+ClearCorner:AddChildWindow(ClearBtn)
+Main:AddChildWindow(CopyCorner)
+CopyCorner:AddChildWindow(CopyBtn)
+
+OpnBtn = OpenButton
+ExBtn = ExecuteBtn
+CleBtn = ClearBtn
+CleCorner = ClearCorner
+ExCorner = ExecuteCorner
+
+
+local KToast
+local ToastTimer
+function Toast(content, time, hideBG)
+    if KToast == nil then
+        KToast = GUIManager:createGUIWindow(GUIType.StaticText, "GUIRoot-KhdToast")
+        KToast:SetHorizontalAlignment(HorizontalAlignment.Center)
+        KToast:SetVerticalAlignment(VerticalAlignment.Bottom)
+        KToast:SetTextHorzAlign(HorizontalAlignment.Center)
+        KToast:SetTextVertAlign(VerticalAlignment.Center)
+        KToast:SetHeight({ 0, 45 })
+        KToast:SetYPosition({ 0, -120 })
+        KToast:SetBackgroundColor(Color.CYAN) 
+        KToast:SetLevel(1)
+        KToast:SetTouchable(false)
+        KToast:SetBordered(true)
+        GUISystem.Instance():GetRootWindow():AddChildWindow(KToast)
+    end
+    KToast:SetVisible(true)
+    KToast:SetText(content)
+    
+    if hideBG then
+        KToast:SetBackgroundColor({ 0, 0, 0, 0 })
+    else
+        KToast:SetBackgroundColor(Color.CYAN)
+        KToast:SetWidth({ 0, KToast:GetTextWidth() + 25 })
+    end
+            LuaTimer:cancel(ToastTimer)
+            local scale = 0.5
+            KToast:SetScale(VectorUtil.newVector3(scale, scale, scale))   
+            local timer = LuaTimer:scheduleTicker(function()
+                if scale <= 1 then
+                     scale = scale + 0.1
+                else
+                     scale = scale - 0.025
+                end
+            KToast:SetScale(VectorUtil.newVector3(scale, scale, scale))
+            end, 0.5, 10)
+           ToastTimer = LuaTimer:schedule(function()
+                local scale = 1
+                      KToast:SetScale(VectorUtil.newVector3(scale, scale, scale))
+                       local timer = LuaTimer:scheduleTicker(function()
+                                if scale == 1 then
+                                    scale = scale - 0.3
+                                end
+                       KToast:SetScale(VectorUtil.newVector3(scale, scale, scale))
+                KToast:SetVisible(false)
+           end, 0.5, 10)
+    end, time or 2000)
+end
+ 
+ OpnBtn:SetHorizontalAlignment(HorizontalAlignment.Right)
+ OpnBtn:SetVerticalAlignment(VerticalAlignment.Top)
+ OpnBtn:SetTextHorzAlign(HorizontalAlignment.Center)
+ OpnBtn:SetTextVertAlign(VerticalAlignment.Center)
+ OpnBtn:SetHeight({ 0, 65 })
+ OpnBtn:SetWidth({ 0, 145 })
+ OpnBtn:SetXPosition({ 0, 0 })
+ OpnBtn:SetYPosition({ 0, 150 })
+ OpnBtn:SetVisible(true)
+ OpnBtn:SetTextBoader(Color.CYAN)
+ OpnBtn:SetLevel(1)
+ OpnBtn:SetTextScale(1.2)
+ OpnBtn:SetText(name)
+ OpnBtn:SetTouchable(true)
+ OpnBtn:SetBackgroundColor({ 0.16, 0.16, 0.16, 1 })
+ OpnBtn:registerEvent(GUIEvent.Click, function()
+      A = not A
+         if A then
+           Main:SetVisible(true)
+           Console:SetVisible(true)
+         else
+           Main:SetVisible(false)
+           Console:SetVisible(false)
+         end
+      end)
+    
+    
+ Main:SetHorizontalAlignment(HorizontalAlignment.Center)
+ Main:SetVerticalAlignment(VerticalAlignment.Center)
+ Main:SetHeight({ 0, 450 })
+ Main:SetWidth({ 0, 750 })
+ Main:SetXPosition({ 0, -200 })
+ Main:SetYPosition({ 0, 0 })
+ Main:SetVisible(false)
+ Main:SetLevel(1)
+ Main:SetTouchable(true)
+ Main:SetBackgroundColor({ 0.15, 0.15, 0.15, 1 })
+ 
+ 
+ MainLine:SetHorizontalAlignment(HorizontalAlignment.Center)
+ MainLine:SetVerticalAlignment(VerticalAlignment.Top)
+ MainLine:SetTextHorzAlign(HorizontalAlignment.Center)
+ MainLine:SetTextVertAlign(VerticalAlignment.Center)
+ MainLine:SetHeight({ 0, 50 })
+ MainLine:SetWidth({ 0, 750 })
+ MainLine:SetXPosition({ 0, 0 })
+ MainLine:SetYPosition({ 0, 0 })
+ MainLine:SetVisible(true)
+ MainLine:SetTextColor(Color.CYAN)
+ MainLine:SetBordered(true)
+ MainLine:SetTextBoader(Color.BLUE)
+ MainLine:SetLevel(1)
+ MainLine:SetText(name)
+ MainLine:SetTextScale(1.3)
+ MainLine:SetTouchable(true)
+ MainLine:SetBackgroundColor({ 0.15, 0.15, 0.15, 1 })
+ 
+ 
+ Console:SetHorizontalAlignment(HorizontalAlignment.Center)
+ Console:SetVerticalAlignment(VerticalAlignment.Center)
+ Console:SetTextHorzAlign(HorizontalAlignment.Left)
+ Console:SetTextVertAlign(10)
+ Console:SetHeight({ 0, 400 })
+ Console:SetWidth({ 0, 275 })
+ Console:SetXPosition({ 0, 350 })
+ Console:SetYPosition({ 0, 25 })
+ Console:SetVisible(false)
+ Console:SetTextColor(Color.RED)
+ Console:SetBordered(true)
+ Console:SetTextBoader(Color.WHITE)
+ Console:SetLevel(1)
+ Console:SetText("")
+ Console:SetWordWrap(16)
+ Console:SetTextScale(1.20)
+ Console:SetTouchable(true)
+ Console:SetBackgroundColor({ 0.15, 0.15, 0.15, 1 })
+
+
+ ConsoleLine:SetHorizontalAlignment(HorizontalAlignment.Center)
+ ConsoleLine:SetVerticalAlignment(VerticalAlignment.Top)
+ ConsoleLine:SetTextHorzAlign(HorizontalAlignment.Center)
+ ConsoleLine:SetTextVertAlign(VerticalAlignment.Center)
+ ConsoleLine:SetHeight({ 0, 50 })
+ ConsoleLine:SetWidth({ 0, 275 })
+ ConsoleLine:SetXPosition({ 0, 0 })
+ ConsoleLine:SetYPosition({ 0, -50 })
+ ConsoleLine:SetVisible(true)
+ ConsoleLine:SetTextColor(Color.WHITE)
+ ConsoleLine:SetBordered(true)
+ ConsoleLine:SetTextBoader(Color.BLUE)
+ ConsoleLine:SetLevel(1)
+ ConsoleLine:SetText("Console")
+ ConsoleLine:SetTextScale(1.3)
+ ConsoleLine:SetTouchable(true)
+ ConsoleLine:SetBackgroundColor({ 0.15, 0.15, 0.15, 1 })
+
+
+ExCorner:SetHorizontalAlignment(HorizontalAlignment.Center)
+ExCorner:SetVerticalAlignment(VerticalAlignment.Bottom)
+ExCorner:SetHeight({ 0, 65 })
+ExCorner:SetWidth({ 0, 150 })
+ExCorner:SetXPosition({ 0, 0 })
+ExCorner:SetYPosition({ 0, -35 })
+ExCorner:SetVisible(true)
+ExCorner:SetBackgroundColor({ 0, 0.5, 0, 1})
+
+ExBtn:SetHorizontalAlignment(HorizontalAlignment.Center)
+ExBtn:SetVerticalAlignment(VerticalAlignment.Center)
+ExBtn:SetTextHorzAlign(HorizontalAlignment.Center)
+ExBtn:SetTextVertAlign(VerticalAlignment.Center)
+ExBtn:SetHeight({ 0, 45 })
+ExBtn:SetWidth({ 0, 130 })
+ExBtn:SetXPosition({ 0, 0 })
+ExBtn:SetYPosition({ 0, 0 })
+ExBtn:SetBordered(true)
+ExBtn:SetText("Execute")
+ExBtn:SetVisible(true)
+ExBtn:SetLevel(1)
+ExBtn:SetBackgroundColor(Color.GREEN)
+
+CleCorner:SetHorizontalAlignment(HorizontalAlignment.Center)
+CleCorner:SetVerticalAlignment(VerticalAlignment.Bottom)
+CleCorner:SetHeight({ 0, 65 })
+CleCorner:SetWidth({ 0, 150 })
+CleCorner:SetXPosition({ 0, -185 })
+CleCorner:SetYPosition({ 0, -35 })
+CleCorner:SetVisible(true)
+CleCorner:SetBackgroundColor({ 0.5, 0, 0, 1})
+
+CleBtn:SetHorizontalAlignment(HorizontalAlignment.Center)
+CleBtn:SetVerticalAlignment(VerticalAlignment.Center)
+CleBtn:SetTextHorzAlign(HorizontalAlignment.Center)
+CleBtn:SetTextVertAlign(VerticalAlignment.Center)
+CleBtn:SetHeight({ 0, 45 })
+CleBtn:SetWidth({ 0, 130 })
+CleBtn:SetXPosition({ 0, 0 })
+CleBtn:SetYPosition({ 0, 0 })
+CleBtn:SetBordered(true)
+CleBtn:SetText("Clear")
+CleBtn:SetVisible(true)
+CleBtn:SetLevel(1)
+CleBtn:SetBackgroundColor(Color.RED)
+
+CopyCorner:SetHorizontalAlignment(HorizontalAlignment.Center)
+CopyCorner:SetVerticalAlignment(VerticalAlignment.Bottom)
+CopyCorner:SetHeight({ 0, 65 })
+CopyCorner:SetWidth({ 0, 150 })
+CopyCorner:SetXPosition({ 0, 185 })
+CopyCorner:SetYPosition({ 0, -35 })
+CopyCorner:SetVisible(true)
+CopyCorner:SetBackgroundColor({ 0, 0, 1, 1})
+
+CopyBtn:SetHorizontalAlignment(HorizontalAlignment.Center)
+CopyBtn:SetVerticalAlignment(VerticalAlignment.Center)
+CopyBtn:SetTextHorzAlign(HorizontalAlignment.Center)
+CopyBtn:SetTextVertAlign(VerticalAlignment.Center)
+CopyBtn:SetHeight({ 0, 45 })
+CopyBtn:SetWidth({ 0, 130 })
+CopyBtn:SetXPosition({ 0, 0 })
+CopyBtn:SetYPosition({ 0, 0 })
+CopyBtn:SetBordered(true)
+CopyBtn:SetText("Copy")
+CopyBtn:SetVisible(true)
+CopyBtn:SetLevel(1)
+CopyBtn:SetBackgroundColor(Color.CYAN)
+
+InputList:SetHorizontalAlignment(HorizontalAlignment.Center)
+InputList:SetVerticalAlignment(VerticalAlignment.Top)
+InputList:SetHeight({ 0, 300 })
+InputList:SetWidth({ 0, 700 })
+InputList:SetXPosition({ 0, 0 })
+InputList:SetYPosition({ 0, 25})
+InputList:SetVisible(true)
+InputList:SetMoveAble(true)
+InputList:SetTouchable(true)
+InputList:SetBackgroundColor({ 0.1, 0.1, 0.1, 1})
+
+Input:SetHorizontalAlignment(HorizontalAlignment.Center)
+Input:SetVerticalAlignment(VerticalAlignment.Top)
+Input:SetHeight({ 0, 1500 })
+Input:SetWidth({ 0, 700 })
+Input:SetXPosition({ 0, 0 })
+Input:SetYPosition({ 0, 0})
+Input:SetText("")
+Input:SetTextHorzAlign(0)
+Input:SetTextVertAlign(1)
+Input:SetTouchable(true)
+Input:SetVisible(true)
+Input:SetBackgroundColor({ 0.1, 0.1, 0.1, 1})
+InputList:AddItem(Input)
+
+ExBtn:registerEvent(GUIEvent.Click, function()
+    togrunCode = false
+    local code = Input:GetText()
+    local ConsoleText = Console:GetText()
+    if code == "" then
+      Console:SetText(ConsoleText .. "Empty Code \n")
+      return
+    end
+    
+    local success, result = pcall(load(code))
+    if not success then
+      Console:SetText(ConsoleText .. "Error: " .. result .. "\n")
+ --     ClientHelper.onSetClipboard(result)
+      return
+    end
+    
+   Console:SetText(ConsoleText .. "Runned Successfully \n")
+ end)
+
+ClearBtn:registerEvent(GUIEvent.Click, function()
+    local code = Input:GetText()
+    if code == "" then
+        Toast("Nothing To Clear...")
+        return
+    end
+    Input:SetText("")
+    Console:SetText("")
+    Toast("Cleared")
+end)
+
+CopyBtn:registerEvent(GUIEvent.Click, function()
+    local code = Input:GetText()
+    if code == "" then
+        Toast("Nothing To Copy...")
+        return
+    end
+    ClientHelper.onSetClipboard(code)
+    Toast("Copy SuccessFully")
+end)
+
