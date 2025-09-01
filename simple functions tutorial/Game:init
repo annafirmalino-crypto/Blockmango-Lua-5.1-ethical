@@ -1,0 +1,21 @@
+function Game:init()
+
+
+<-- gui ( for sample)
+<-- function & code ( for sample)
+<-- ClientHelper
+
+
+
+self.CGame = CGame.Instance()
+self.GameType = self.CGame:getGameType()
+self.EnableIndie = self.CGame:isEnableIndie(true)
+self.Blockman = Blockman.Instance()
+self.World = self.Blockman:getWorld()
+self.LowerDevice = self.CGame:isLowerDevice()
+if self.World then
+    EngineWorld:setWorld(self.World)
+end
+
+end <-- last 'end' dont forget it
+
